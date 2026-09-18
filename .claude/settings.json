@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(pnpm --filter frontend exec prettier --check .)",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./frontend/package.json'\\).scripts, null, 2\\)\\)\")",
+      "Bash(chmod +x .husky/pre-commit)",
+      "Bash(node -e \"const p=require\\('./frontend/package.json'\\); console.log\\('prisma:', p.dependencies?.prisma||p.devDependencies?.prisma\\); console.log\\('@prisma/client:', p.dependencies?.['@prisma/client']\\)\")",
+      "Bash(pnpm audit *)",
+      "Bash(pnpm --filter frontend exec vitest run)"
+    ]
+  }
+}

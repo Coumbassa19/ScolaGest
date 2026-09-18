@@ -1,0 +1,48 @@
+{
+  "name": "izikit",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Solo-dev SaaS monolith starter — Next.js 16 (full-stack: API routes + Server Actions) + Prisma + Auth (cookie/CSRF/JWT) — fork via gh repo create --template",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter frontend run dev",
+    "build": "pnpm --filter frontend run build",
+    "test": "pnpm --filter frontend run test",
+    "lint": "pnpm --filter frontend run lint",
+    "typecheck": "pnpm --filter frontend run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:push": "pnpm --filter frontend run db:push",
+    "db:migrate:dev": "pnpm --filter frontend run db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter frontend run db:migrate:deploy",
+    "db:migrate:status": "pnpm --filter frontend run db:migrate:status",
+    "db:studio": "pnpm --filter frontend run db:studio",
+    "db:make-superadmin": "pnpm --filter frontend run db:make-superadmin",
+    "seed:dev": "pnpm --filter frontend run seed:dev",
+    "smoke:auth": "pnpm --filter frontend run smoke:auth",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "prettier --write",
+      "eslint --fix --max-warnings=0 --no-warn-ignored"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.2",
+    "prettier": "^3.4.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.20.0"
+  }
+}

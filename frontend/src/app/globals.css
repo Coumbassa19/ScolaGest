@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+@theme {
+  /* used via utility-classes, bg-background, text-primary, and many more */
+  --color-background: #f4f3ef;
+  --color-foreground: #111827;
+  --color-border: #e2ddd5;
+  --color-input: #ede9e2;
+  --color-primary: #1a3a5c;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f0e8d5;
+  --color-secondary-foreground: #b8860b;
+  --color-accent: #c9a84c;
+  --color-accent-foreground: #111827;
+  --color-muted: #e8e3d8;
+  --color-muted-foreground: #7a7060;
+  --color-surface: #ffffff;
+  --color-surface-foreground: #111827;
+  --color-success: #2a6a3e;
+  --color-success-bg: #e8f5ed;
+  --color-warning: #b8860b;
+  --color-warning-bg: #fdf6e3;
+  --color-danger: #8b2c2c;
+  --color-danger-bg: #fdf0f0;
+  --color-sidebar: #12253a;
+  --color-sidebar-foreground: #e8e3d8;
+  --color-sidebar-muted: #7a94a8;
+
+  /* DO NOT REMOVE: these radius variables are required by the theme editor. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+
+  /* DONT CHANGE OR REMOVE THIS VARIABLE */
+  --radius: var(--radius-sm);
+
+  /* DO NOT REMOVE: these font variables are required by the theme editor. */
+  --font-body: var(--font-dm-sans), sans-serif;
+  --font-headings: var(--font-dm-sans), sans-serif;
+
+  /* Add and change text sizes as you see fit */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --text-3xl: 28px;
+  --text-4xl: 36px;
+}
+
+/* Tailwind's preflight resets <button> to cursor: default (its assumption is
+   that custom-styled buttons opt into cursor-pointer explicitly) — but every
+   button in this app is a real actionable control, so restore the pointer
+   cursor globally instead of adding `cursor-pointer` one component at a time. */
+button:not(:disabled) {
+  cursor: pointer;
+}

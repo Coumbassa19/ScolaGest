@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Dummy env so the app can boot during typecheck/build (validation runs at import-time).
+      DATABASE_URL: postgresql://user:pass@localhost:5432/db?schema=public
+      JWT_SECRET: ci-only-jwt-secret-at-least-32-characters-long-xyz
+      ENCRYPTION_KEY: aGVsbG8td29ybGQtdGhpcy1pcy0zMi1ieXRlcy1sb25n
+      COOKIE_PREFIX: app
+      NEXT_PUBLIC_COOKIE_PREFIX: app
+      AUTH_FORGOT_TARGET_LATENCY_MS: '0'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Prisma generate
+        run: pnpm --filter frontend exec prisma generate
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      # Fail the build on high/critical CVEs in production deps.
+      # Dev-only advisories are tolerated (they don't ship to users).
+      - name: Audit (prod deps, high+ severity)
+        run: pnpm audit --prod --audit-level=high

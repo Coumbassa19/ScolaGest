@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "School" ADD COLUMN     "plan" TEXT NOT NULL DEFAULT 'CROISSANCE';

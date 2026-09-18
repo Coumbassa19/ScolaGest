@@ -1,0 +1,363 @@
+// Paramètres — ScolaGest school-settings screen (Banani design) merged with the
+// starter's existing real, backend-wired account-security controls.
+//
+// The starter shipped this route as a functional account page (password
+// change + Google OAuth linking, calling the real /api/auth/* endpoints —
+// see AuthContext/ToastContext, now in components/settings/AccountSecuritySection).
+// The Banani design export also targets `/settings` for school-level
+// configuration (institution info, academic calendar, users, preferences,
+// data). Rather than deleting the working account-security flows, both live
+// here: the Banani sections render first, followed by a "Compte" section
+// that keeps the original password/OAuth functionality, restyled to match
+// the new design tokens.
+//
+// An async Server Component (not 'use client') so "Informations de
+// l'établissement" can fetch its data server-side, like every other form in
+// this app — the interactive bits that need it are their own client
+// components (AccountSecuritySection, AcademicYearControl, SchoolSettingsForm).
+import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import Sidebar from '@/components/Sidebar';
+import Icon from '@/components/global/Icon';
+import AcademicYearControl from '@/components/forms/AcademicYearControl';
+import AccountSecuritySection from '@/components/settings/AccountSecuritySection';
+import SchoolSettingsForm from '@/components/forms/SchoolSettingsForm';
+import UserStatusToggle from '@/components/settings/UserStatusToggle';
+import { getSchoolSettings } from '@/lib/server/school-settings';
+import { MobileCardList, CardField } from '@/components/MobileCardList';
+import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
+import { requireSchoolId } from '@/lib/server/tenant/context';
+
+const STAFF_ROLE_KEY: Record<string, string> = {
+  ADMIN: 'roleAdmin',
+  SUPERADMIN: 'roleSuperadmin',
+  DIRECTION: 'roleDirection',
+  TEACHER: 'roleTeacher',
+};
+
+export default async function SettingsPage() {
+  const staff = await requirePageAuth({ menuKey: 'settings' });
+  const prisma = staff.user.prisma;
+  const schoolId = requireSchoolId(staff.user.schoolId);
+  // Managing OTHER accounts' access is a role privilege, not a menu toggle
+  // (see requireAdminPage) — DIRECTION/TEACHER accounts with the 'settings'
+  // menu granted still never see this section, no matter what enabledMenus
+  // says, since roleRank always ranks them 0.
+  const isAdmin = staff.user.role === 'ADMIN' || staff.user.role === 'SUPERADMIN';
+  const staffUsers = isAdmin
+    ? await prisma.user.findMany({
+        where: { schoolId, role: { in: ['ADMIN', 'SUPERADMIN', 'DIRECTION', 'TEACHER'] } },
+        select: { id: true, email: true, name: true, role: true, status: true },
+        orderBy: { createdAt: 'desc' },
+      })
+    : [];
+  const schoolSettings = await getSchoolSettings(prisma, schoolId);
+  const t = await getTranslations('settings');
+  const tc = await getTranslations('common');
+  const tb = await getTranslations('billing');
+  return (
+    <div className="flex flex-col md:flex-row bg-background min-h-full font-body">
+      <Sidebar activeItem="settings" />
+
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="px-4 py-3 md:px-8 md:py-4 border-b border-border bg-secondary">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 text-muted-foreground text-sm font-semibold mb-4"
+          >
+            <Icon i="arrow-left" size={16} />
+            {tc('backToDashboard')}
+          </Link>
+          <h1 className="text-2xl md:text-4xl font-headings font-semibold text-foreground">
+            {t('title')}
+          </h1>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 px-4 py-4 md:px-8 md:py-6">
+          <div className="max-w-4xl space-y-6">
+            {/* Subscription status — proactive link so a school can check
+                before it's ever blocked, not just once the gate forces it here. */}
+            <Link
+              href="/billing"
+              className="flex items-center justify-between bg-surface rounded-lg border border-border px-6 py-4"
+            >
+              <div className="flex items-center gap-3">
+                <Icon i="circle-dollar-sign" size={18} className="text-primary" />
+                <span className="text-sm font-semibold text-foreground">{tb('title')}</span>
+              </div>
+              <Icon i="chevron-right" size={16} className="text-muted-foreground" />
+            </Link>
+
+            {/* Section: Informations de l'établissement */}
+            <SchoolSettingsForm initialData={schoolSettings} />
+
+            {/* Section: Calendrier académique */}
+            <div className="bg-surface rounded-lg border border-border px-6 py-5">
+              <div className="mb-5 pb-5 border-b border-border">
+                <h2 className="text-lg font-headings font-semibold text-foreground">
+                  {t('calendar.title')}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">{t('calendar.subtitle')}</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:items-end">
+                  <AcademicYearControl />
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      {t('calendar.currentPeriodLabel')}
+                    </label>
+                    <div className="border border-border rounded-md px-3 py-2 flex items-center justify-between bg-background cursor-pointer">
+                      <span className="text-sm text-foreground">{t('calendar.term1')}</span>
+                      <Icon i="chevron-down" size={14} />
+                    </div>
+                  </div>
+                  <button className="px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md">
+                    {t('calendar.configure')}
+                  </button>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                    <div>
+                      <span className="text-sm font-semibold text-foreground">
+                        {t('calendar.term1')}
+                      </span>
+                      <p className="text-xs text-muted-foreground">{t('calendar.term1Range')}</p>
+                    </div>
+                    <button className="text-sm text-primary font-semibold">
+                      {t('calendar.edit')}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                    <div>
+                      <span className="text-sm font-semibold text-foreground">
+                        {t('calendar.term2')}
+                      </span>
+                      <p className="text-xs text-muted-foreground">{t('calendar.term2Range')}</p>
+                    </div>
+                    <button className="text-sm text-primary font-semibold">
+                      {t('calendar.edit')}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                    <div>
+                      <span className="text-sm font-semibold text-foreground">
+                        {t('calendar.term3')}
+                      </span>
+                      <p className="text-xs text-muted-foreground">{t('calendar.term3Range')}</p>
+                    </div>
+                    <button className="text-sm text-primary font-semibold">
+                      {t('calendar.edit')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Utilisateurs — ADMIN/SUPERADMIN only (see isAdmin above) */}
+            {isAdmin && (
+              <div className="bg-surface rounded-lg border border-border px-6 py-5">
+                <div className="mb-5 pb-5 border-b border-border flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-headings font-semibold text-foreground">
+                      {t('users.title')}
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-1">{t('users.subtitle')}</p>
+                  </div>
+                  <Link
+                    href="/settings/users/new"
+                    className="px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md"
+                  >
+                    {t('users.addUser')}
+                  </Link>
+                </div>
+
+                {/* Mobile: stacked cards (below sm) */}
+                <div className="sm:hidden -mx-2">
+                  <MobileCardList
+                    items={staffUsers}
+                    keyFor={(u) => u.id}
+                    emptyMessage={t('users.noneYet')}
+                    renderCard={(u) => (
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-semibold text-foreground text-sm break-all">
+                            {u.name ? `${u.name} — ${u.email}` : u.email}
+                          </span>
+                          <span
+                            className={`text-xs font-semibold px-2 py-1 rounded-md w-fit shrink-0 ${u.status === 'ACTIVE' ? 'bg-success text-background' : 'bg-muted text-muted-foreground'}`}
+                          >
+                            {u.status === 'ACTIVE' ? t('users.active') : t('users.suspended')}
+                          </span>
+                        </div>
+                        <CardField
+                          label={t('users.role')}
+                          value={t(`users.${STAFF_ROLE_KEY[u.role] ?? 'roleTeacher'}`)}
+                        />
+                        <div className="pt-1.5 flex justify-end gap-4">
+                          <UserStatusToggle userId={u.id} status={u.status} />
+                        </div>
+                      </>
+                    )}
+                  />
+                </div>
+
+                {/* Desktop: grid table (sm and up) */}
+                <div className="hidden sm:block space-y-2 overflow-x-auto">
+                  <div style={{ minWidth: '520px' }}>
+                    <div className="grid grid-cols-5 gap-3 px-4 py-3 bg-muted rounded-md">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {t('users.email')}
+                      </span>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {t('users.role')}
+                      </span>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {t('users.status')}
+                      </span>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider col-span-2">
+                        {t('users.actions')}
+                      </span>
+                    </div>
+
+                    {staffUsers.length === 0 ? (
+                      <div className="px-4 py-6 text-sm text-muted-foreground text-center">
+                        {t('users.noneYet')}
+                      </div>
+                    ) : (
+                      staffUsers.map((u) => (
+                        <div
+                          key={u.id}
+                          className="grid grid-cols-5 gap-3 px-4 py-3 border-b border-border items-center"
+                        >
+                          <span className="text-sm text-foreground break-all">
+                            {u.name ? `${u.name} — ${u.email}` : u.email}
+                          </span>
+                          <span className="text-sm font-semibold text-foreground">
+                            {t(`users.${STAFF_ROLE_KEY[u.role] ?? 'roleTeacher'}`)}
+                          </span>
+                          <div
+                            className={`text-xs font-semibold px-2 py-1 rounded-md w-fit ${u.status === 'ACTIVE' ? 'bg-success text-background' : 'bg-muted text-muted-foreground'}`}
+                          >
+                            {u.status === 'ACTIVE' ? t('users.active') : t('users.suspended')}
+                          </div>
+                          <UserStatusToggle userId={u.id} status={u.status} />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Section: Préférences */}
+            <div className="bg-surface rounded-lg border border-border px-6 py-5">
+              <div className="mb-5 pb-5 border-b border-border">
+                <h2 className="text-lg font-headings font-semibold text-foreground">
+                  {t('preferences.title')}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">{t('preferences.subtitle')}</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">
+                      {t('preferences.languageLabel')}
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t('preferences.languageHint')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-border">
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">
+                      {t('preferences.dateFormatLabel')}
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t('preferences.dateFormatSample')}
+                    </p>
+                  </div>
+                  <div className="border border-border rounded-md px-3 py-2 flex items-center justify-between bg-background cursor-pointer min-w-32">
+                    <span className="text-sm text-foreground">
+                      {t('preferences.dateFormatSample')}
+                    </span>
+                    <Icon i="chevron-down" size={14} />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-border">
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">
+                      {t('preferences.notificationsLabel')}
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t('preferences.notificationsHint')}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="px-3 py-1.5 text-sm font-semibold text-foreground border border-border rounded-md bg-surface">
+                      {t('preferences.disable')}
+                    </button>
+                    <button className="px-3 py-1.5 text-sm font-semibold text-primary-foreground bg-primary rounded-md">
+                      {t('preferences.enable')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Données */}
+            <div className="bg-surface rounded-lg border border-border px-6 py-5">
+              <div className="mb-5 pb-5 border-b border-border">
+                <h2 className="text-lg font-headings font-semibold text-foreground">
+                  {t('data.title')}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">{t('data.subtitle')}</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                  <div>
+                    <span className="text-sm font-semibold text-foreground">
+                      {t('data.lastBackup')}
+                    </span>
+                    <p className="text-xs text-muted-foreground">{t('data.lastBackupTimestamp')}</p>
+                  </div>
+                  <button className="px-3 py-1.5 text-sm font-semibold text-foreground border border-border rounded-md bg-surface">
+                    {t('data.download')}
+                  </button>
+                </div>
+
+                <div className="flex gap-3">
+                  <button className="flex-1 px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md">
+                    {t('data.backupNow')}
+                  </button>
+                  <button className="flex-1 px-4 py-2 text-sm font-semibold text-warning border border-warning rounded-md bg-surface">
+                    {t('data.restoreFromFile')}
+                  </button>
+                </div>
+
+                <div className="p-3 bg-secondary rounded-md">
+                  <p className="text-xs text-foreground font-semibold">{t('data.dangerZone')}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('data.dangerZoneHint')}</p>
+                  <button className="mt-2 px-4 py-1.5 text-xs font-semibold text-danger border border-danger rounded-md bg-surface">
+                    {t('data.deleteAllData')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Compte (real, backend-wired — preserved from the starter) */}
+            <AccountSecuritySection />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

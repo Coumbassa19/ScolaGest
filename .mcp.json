@@ -1,0 +1,5 @@
+{
+  "$comment_1": "Project-level MCP servers. Claude Code reads this file on session start. Empty by default — the starter ships no MCP servers.",
+  "$comment_2": "To add an MCP server (e.g. Banani for design import, Supabase, Linear, etc.): paste the exact server block your provider gives you inside `mcpServers`. The `/setup-kit` skill walks through this for Banani in Phase 5 (optional). Format examples — stdio: `\"name\": { \"command\": \"npx\", \"args\": [\"-y\", \"<pkg>\"] }` — HTTP/SSE: `\"name\": { \"url\": \"https://...\" }`. Restart Claude Code after editing.",
+  "mcpServers": {}
+}

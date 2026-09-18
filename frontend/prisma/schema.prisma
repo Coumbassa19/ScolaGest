@@ -1,0 +1,889 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  // Nullable: OAuth-only users (e.g. signed up with Google) never set a
+  // password. Email/password signup still requires it; the auth route
+  // enforces presence at runtime.
+  passwordHash      String?
+  emailVerifiedAt   DateTime?
+  tokenVersion      Int       @default(0)
+  withdrawalPinHash String? // bcrypt hash of withdrawal PIN; null = no PIN set
+  // Optional display name — populated from OAuth profile on first sign-in.
+  // Email/password users can fill it later via /api/auth/me PATCH (future).
+  name              String?
+  // Optional avatar URL — populated from OAuth profile on first sign-in, or
+  // a data URL when the user uploads their own photo (no Cloudinary
+  // configured yet — same approach as Student.photoUrl).
+  avatarUrl         String?
+  // Optional phone number, editable from /profile. No verification flow —
+  // purely a contact field.
+  phone             String?
+  // App-wide role. USER is the default; ADMIN unlocks /admin back-office;
+  // SUPERADMIN can promote/demote other admins. Bootstrap an initial
+  // SUPERADMIN via `pnpm db:make-superadmin <email>` (see scripts).
+  // DIRECTION / TEACHER are ScolaGest school-staff roles (admin-created
+  // only, see /settings/users) — they carry NO admin-back-office rank
+  // (roleRank treats them like USER, rank 0) and are gated instead by
+  // `enabledMenus` (DIRECTION) or by `TeacherAssignment` rows (TEACHER).
+  role              String    @default("USER") // USER | ADMIN | SUPERADMIN | DIRECTION | TEACHER
+  // Account status. ACTIVE = login + refresh allowed; SUSPENDED = both
+  // refused with 403 ACCOUNT_SUSPENDED. Mutated via /api/admin/users/[id]/status
+  // (ADMIN can suspend; only SUPERADMIN can restore).
+  status            String    @default("ACTIVE") // ACTIVE | SUSPENDED
+  // Links a TEACHER-role login to its HR roster record — nullable because
+  // most Teacher rows have no login (yet), and non-TEACHER users never set
+  // this. @unique: one login per Teacher row.
+  teacherId         String?   @unique
+  teacher           Teacher?  @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  // Sidebar menu keys enabled for this account (see src/lib/server/permissions/menu-keys.ts).
+  // null = unrestricted (ADMIN/SUPERADMIN always see everything and this is
+  // simply left null for them). For DIRECTION this is the admin-picked set;
+  // for TEACHER it's BONUS menus on top of the always-on core
+  // (dashboard/grades/subjects) — see requireStaff's effective-access rule.
+  enabledMenus      Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  verificationCodes VerificationCode[]
+  uploads           FileUpload[]
+  notifications     Notification[]
+  notifPrefs        NotificationPreferences?
+  orders            Order[]
+  withdrawals       Withdrawal[]
+  oauthAccounts     OAuthAccount[]
+  adminActions      AdminAction[]
+  recordedAbsences  Absence[]
+
+  // Multi-tenancy is opt-in per project: by default no resource is org-scoped.
+  // Apps that need it (marketplace, B2B SaaS, classifieds) wire owner relations
+  // on their domain models.
+  ownedOrganizations Organization[]       @relation("OrgOwner")
+  memberships        OrganizationMember[] @relation("OrgMembership")
+
+  // ScolaGest tenant — the school this staff account belongs to. Nullable
+  // during the multi-tenant migration backfill (see School model below);
+  // every real staff login (ADMIN/SUPERADMIN/DIRECTION/TEACHER) has one set.
+  // Deliberately NOT auto-scoped by the tenant Prisma extension (see
+  // src/lib/server/prisma.ts) — login must be able to look a user up by
+  // email BEFORE any schoolId is known; this is the field that reveals it.
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([schoolId])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Admin audit log — every back-office mutation is recorded here so we can
+// answer "who did what when" during incidents / compliance reviews.
+//
+// `action` is a free-form dotted string the UI groups by (e.g.
+// "withdrawal.cancel", "user.role_change", "order.refund").
+// `targetType` + `targetId` reference the affected row when applicable.
+// `metadata` carries the diff or extra context as JSON.
+//
+// Retention: not pruned automatically (compliance). If your jurisdiction
+// requires deletion after N years, add a cron in backend/src/index.ts
+// modeled on the WebhookLog purge.
+// ───────────────────────────────────────────────────────────────────────
+model AdminAction {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Multi-tenancy primitives — opt-in.
+//
+// Default project surface stays user-owned (`Order.userId`, `Withdrawal.userId`).
+// Apps that need orgs add `organizationId String?` to their domain models
+// case by case and use `requireOrgRole()` middleware to gate access.
+//
+// Slug must be unique app-wide (not just within an owner) so it can be
+// used as a stable URL segment.
+// ───────────────────────────────────────────────────────────────────────
+model Organization {
+  id        String               @id @default(cuid())
+  slug      String               @unique
+  name      String
+  ownerId   String
+  owner     User                 @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members   OrganizationMember[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([ownerId])
+}
+
+// Role precedence: OWNER > ADMIN > MEMBER. The owner is also a member row
+// (created in the same tx as the org) so list-my-orgs queries can join
+// uniformly via memberships.
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation("OrgMembership", fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("MEMBER") // OWNER | ADMIN | MEMBER
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// OAuth identities — one User can have N linked providers (Google, GitHub, …).
+// (provider, providerAccountId) is unique so the same Google account can't
+// link twice. Email matching at sign-in is intentional: if a user signed up
+// with email/password and later "Sign in with Google" using the same email,
+// we link the Google account to the existing user instead of creating a
+// duplicate (see backend/src/routes/oauth.ts).
+// ───────────────────────────────────────────────────────────────────────
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String // "google" | "github" | …
+  providerAccountId String // sub from the OIDC ID token
+  // Optional refresh token (encrypted at rest if you store one) — Google
+  // only returns it on first consent with `access_type=offline`. Most
+  // boilerplate flows don't need it; we keep the column for future use.
+  refreshToken      String?
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model VerificationCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Short 8-char Crockford code for EMAIL_VERIFY/PASSWORD_RESET; a long
+  // random base64url token for ACCOUNT_SETUP (see generateSetupToken) —
+  // same column, different generator, since ACCOUNT_SETUP is a clicked
+  // link rather than a typed-in code and leans on entropy instead of an
+  // attempts counter.
+  code      String
+  type      String // EMAIL_VERIFY | PASSWORD_RESET | ACCOUNT_SETUP
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([userId, type])
+  @@index([code, type])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// File uploads — Cloudinary (column names kept from the R2 era; no migration needed)
+// ───────────────────────────────────────────────────────────────────────
+model FileUpload {
+  id        String   @id @default(cuid())
+  userId    String? // nullable — uploads can be anonymous if route allows
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  key       String   @unique // Cloudinary public_id (column name historical — was R2 object key)
+  filename  String
+  mimeType  String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Phase 2 — durable email queue rows
+// ───────────────────────────────────────────────────────────────────────
+model EmailJob {
+  id          String    @id @default(cuid())
+  to          String
+  subject     String
+  html        String
+  text        String?
+  status      String    @default("PENDING") // PENDING | SENT | FAILED | DEAD
+  attempts    Int       @default(0)
+  lastError   String?
+  scheduledAt DateTime  @default(now())
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, scheduledAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Phase 2 — notifications (at-most-once via dedupeKey)
+// ───────────────────────────────────────────────────────────────────────
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  data      Json?
+  dedupeKey String    @unique
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+model NotificationPreferences {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // JSON map of { eventType: { email: bool, inApp: bool } } — flexible without migrations.
+  prefs     Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Outbox — durable side-effects (notifications, emails) emitted from
+// inside transactions (e.g. webhook handlers, withdrawal flow). Side-effect
+// rows are inserted in the same tx as the state change, then a worker
+// drains them. Survives crashes the previous postCommit-callback pattern
+// silently dropped.
+//
+// `kind` is a free-form string the dispatcher routes on
+// (e.g. "notification.payment_received", "email.payment_confirmation").
+// ───────────────────────────────────────────────────────────────────────
+model OutboxEvent {
+  id          String    @id @default(cuid())
+  kind        String
+  payload     Json
+  status      String    @default("PENDING") // PENDING | SENT | FAILED | DEAD
+  attempts    Int       @default(0)
+  lastError   String?
+  scheduledAt DateTime  @default(now())
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, scheduledAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Phase 2 — webhook idempotency log
+// ───────────────────────────────────────────────────────────────────────
+model WebhookLog {
+  id          String    @id @default(cuid())
+  provider    String
+  externalId  String
+  eventType   String
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([externalId, eventType])
+  @@index([provider, createdAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Phase 3 — payments (Order + Withdrawal)
+//
+// `amount` is stored in the smallest unit of `currency` (no decimals).
+// For XOF (FCFA, Senegal) that's 1 = 1 FCFA. For USD adapt to cents
+// at the call site — the schema is currency-agnostic.
+// ───────────────────────────────────────────────────────────────────────
+model Order {
+  id            String  @id @default(cuid())
+  userId        String? // nullable — guest checkout supported
+  user          User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  amount        Int // gross amount, smallest unit
+  currency      String  @default("XOF") // ISO 4217
+  status        String  @default("PENDING") // PENDING | PAID | EXPIRED | FAILED | REFUNDED
+  customerEmail String?
+  customerPhone String?
+  customerName  String?
+  metadata      Json? // app-specific fields
+
+  // Stripe-grade idempotency. Required header on POST /api/orders; replay
+  // with same value returns the original Order row instead of double-charging.
+  // Nullable so existing rows pre-migration don't break the @unique constraint.
+  idempotencyKey String? @unique
+
+  // Provider reference
+  provider         String // e.g. "bictorys"
+  providerChargeId String? @unique
+  paymentUrl       String? // checkout/redirect URL returned by provider
+  paymentMethod    String? // WAVE | ORANGE_MONEY | FREE_MONEY (set on PAID by webhook)
+
+  // Optional commission (for marketplace-style apps)
+  commissionAmount Int?
+  netAmount        Int?
+
+  // Lifecycle
+  expiresAt DateTime // PENDING expiry; not cleared on PAID (history)
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+  @@index([provider, providerChargeId])
+}
+
+model Withdrawal {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  amount      Int // requested amount, smallest unit
+  currency    String @default("XOF")
+  status      String @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED | CANCELLED
+  destination Json // { method: "WAVE" | "ORANGE_MONEY" | ..., phone: "+221...", accountName?: "..." }
+
+  // Provider reference
+  provider         String // e.g. "bictorys"
+  providerPayoutId String? @unique
+  failureReason    String?
+
+  requestedAt DateTime  @default(now())
+  processedAt DateTime?
+  completedAt DateTime?
+
+  @@index([userId, requestedAt])
+  @@index([status, requestedAt])
+  @@index([provider, providerPayoutId])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// School — one row per subscribing tenant. Every ScolaGest domain model
+// below carries a `schoolId` and is auto-scoped to the current request's
+// school by the Prisma Client Extension in src/lib/server/prisma.ts
+// (see tenant/context.ts) — a route/page never needs to add `schoolId` to
+// its own `where` manually. `schoolId` is temporarily nullable on every
+// domain model below during the migration/backfill that introduces this
+// table (see scripts/backfill-schools.ts); it is tightened to required in
+// a second migration once the backfill is verified.
+//
+// Billing: `status` reflects the subscription lifecycle — TRIALING (new
+// signup, `trialEndsAt` not yet passed), ACTIVE (paid, `currentPeriodEnd`
+// not yet passed), PAST_DUE (trial or paid period lapsed — access blocked,
+// see requireStaff/requirePageAuth). Bictorys has no native recurring
+// billing, so a successful charge just extends `currentPeriodEnd`; see
+// Phase 3 (SchoolSubscriptionPayment, /api/billing/subscribe).
+// ───────────────────────────────────────────────────────────────────────
+model School {
+  id               String    @id @default(cuid())
+  name             String
+  slug             String    @unique
+  status           String    @default("TRIALING") // TRIALING | ACTIVE | PAST_DUE
+  // ESSENTIEL (capped student count) | CROISSANCE (unlimited) — chosen at
+  // signup from the public pricing page; see src/lib/server/billing/
+  // constants.ts (PLANS) for the price/studentLimit each maps to. Defaults
+  // to CROISSANCE (unlimited) so a pre-existing school never gets silently
+  // capped by a migration.
+  plan             String    @default("CROISSANCE")
+  trialEndsAt      DateTime
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Which reminder milestones (days-before-expiry — 15, 7, 1) have already
+  // been emailed for the CURRENT trial/subscription period, so the daily
+  // cron sends each milestone exactly once rather than every day until
+  // expiry. Reset to [] whenever the period is extended (see the Bictorys
+  // webhook's onPaid) so the next period gets its own set of reminders.
+  remindersSentDays Int[] @default([])
+
+  // Public "trusted by" homepage showcase — opt-in only (a customer's brand
+  // is never shown publicly without them explicitly agreeing). Both fields
+  // live on School itself (not the tenant-scoped SchoolSettings) precisely
+  // so the public homepage can read them through the plain unscoped `prisma`
+  // import, same as status/trialEndsAt — no cross-tenant read is involved.
+  logoUrl            String?
+  featuredOnHomepage Boolean @default(false)
+
+  users                User[]
+  schoolClasses        SchoolClass[]
+  academicYears        AcademicYear[]
+  students             Student[]
+  absences             Absence[]
+  schoolMessages       SchoolMessage[]
+  bulletinRemarks      BulletinRemark[]
+  teachers             Teacher[]
+  teacherPayments      TeacherPayment[]
+  tuitionPlans         TuitionPlan[]
+  subjects             Subject[]
+  teacherAssignments   TeacherAssignment[]
+  grades               Grade[]
+  scheduleEntries      ScheduleEntry[]
+  revenuePayments      RevenuePayment[]
+  settings             SchoolSettings?
+  subscriptionPayments SchoolSubscriptionPayment[]
+
+  @@index([status])
+}
+
+// A school's payment TO the platform for its own ScolaGest subscription —
+// distinct from RevenuePayment, which is a school's OWN tuition revenue
+// from its students. Not tenant-scoped (see prisma.ts's TENANT_SCOPED_MODELS
+// header comment) for the same reason School itself isn't: this describes
+// the tenant's relationship with the platform, resolved by schoolId/id
+// directly rather than auto-filtered — notably from the Bictorys webhook,
+// which has no ambient schoolId to scope by at all.
+model SchoolSubscriptionPayment {
+  id       String @id @default(cuid())
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  amount   Int // gross amount, smallest unit
+  currency String // ISO 4217 — see the billing route's header comment re: GNF/Bictorys support
+  status   String @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
+
+  // Stripe-grade idempotency, same pattern as Order.idempotencyKey.
+  idempotencyKey   String  @unique
+  provider         String // e.g. "bictorys"
+  providerChargeId String? @unique
+  paymentUrl       String? // checkout/redirect URL returned by provider
+
+  // The subscription period this payment pays for, set once PAID (webhook
+  // extends School.currentPeriodEnd by the same span).
+  periodStart DateTime?
+  periodEnd   DateTime?
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([schoolId])
+  @@index([status])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// ScolaGest school-management domain models — multi-tenant: every model
+// below carries `schoolId` (see School above).
+//
+// Kept intentionally simple for a fast-moving prototype:
+//   - Teacher.classesAssignees / Subject.classesText are free-text
+//     comma-separated lists (matches the Banani mock UI, which used plain
+//     text inputs / checkboxes rather than a join table) instead of a
+//     full many-to-many join table.
+//   - Grade is one row per (student, subject, period) — a single 0-20
+//     "note finale" rather than modeling the sub-components (contrôle 1/2,
+//     devoirs, comportement) shown in the enter-grades mock, which would
+//     need a second table for no functional gain at this stage.
+// ───────────────────────────────────────────────────────────────────────
+model SchoolClass {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String // e.g. "6ème A" — unique per school, see @@unique below
+  level     Int      @default(0) // sort order (lower = younger class)
+  createdAt DateTime @default(now())
+
+  students           Student[]
+  grades             Grade[]
+  schedule           ScheduleEntry[]
+  tuitionPlans       TuitionPlan[]
+  teacherAssignments TeacherAssignment[]
+  absences           Absence[]
+
+  @@unique([schoolId, name])
+  @@index([level])
+  @@index([schoolId])
+}
+
+// One row per school year (e.g. "2025-2026"). Exactly one is `isCurrent` at
+// a time (enforced in the API route via a transaction, not a DB constraint —
+// Postgres has no native "at most one true" constraint without a partial
+// unique index, which felt heavier than this prototype needs). Populates the
+// "Année scolaire" dropdowns on add-student / reregister-student instead of
+// a hardcoded two-item list.
+model AcademicYear {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  label     String // e.g. "2025-2026" — unique per school, see @@unique below
+  isCurrent Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([schoolId, label])
+  @@index([schoolId])
+}
+
+model Student {
+  id            String      @id @default(cuid())
+  schoolId      String
+  school        School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  matricule     String // unique per school, see @@unique below
+  nom           String
+  prenom        String
+  dateNaissance DateTime?
+  ville         String?
+  quartier      String?
+  sexe          String      @default("M") // M | F
+  photoUrl      String?
+  anneeScolaire String      @default("2024-2025")
+  // NOUVEAU (first enrollment, pays "inscription") | ANCIEN (returning,
+  // pays "réinscription" — usually a different amount). Set automatically
+  // by which enrollment form was used, but editable from the Comptabilité
+  // > Inscription & Réinscription page since fee tiers can be corrected.
+  statut        String      @default("NOUVEAU")
+  classId       String
+  schoolClass   SchoolClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  createdAt     DateTime    @default(now())
+
+  // "Informations supplémentaires" — parent/guardian contact, captured at
+  // the bottom of the enrollment form, all optional (not every family has
+  // an email, and this data can be filled in later).
+  parentNom       String?
+  parentTelephone String?
+  parentEmail     String?
+
+  grades          Grade[]
+  revenuePayments RevenuePayment[]
+  bulletinRemarks BulletinRemark[]
+  schoolMessages  SchoolMessage[]
+  absences        Absence[]
+
+  @@unique([schoolId, matricule])
+  @@index([classId])
+  @@index([nom, prenom])
+  @@index([schoolId])
+}
+
+// Menu "Absences" (src/app/absences) — the daily roll-call register
+// ("cahier d'appel"). One row per (student, date): a class's whole roster
+// gets a row for every day attendance is taken, including PRESENT — this is
+// deliberately a complete record (not just exceptions), so per-student
+// attendance rates and history are a straight query rather than an
+// "absence of an absence" inference. `recordedById` is nullable because a
+// SUPERADMIN backfilling a forgotten day shouldn't require inventing a
+// User, but is set whenever the acting account is known — see POST/PATCH
+// /api/absences.
+model Absence {
+  id           String      @id @default(cuid())
+  schoolId     String
+  school       School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId      String
+  schoolClass  SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  date         DateTime // day granularity — always stored at midnight UTC
+  status       String // PRESENT | ABSENT | LATE | EXCUSED
+  reason       String? // free text, e.g. "Certificat médical" — EXCUSED/LATE mainly
+  recordedById String?
+  recordedBy   User?       @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([studentId, date])
+  @@index([classId, date])
+  @@index([studentId])
+  @@index([schoolId])
+}
+
+// Menu "Messages" (src/app/messages) — communication log for messages sent
+// either to a student's parent/guardian (absence notice, convocation,
+// free-form) or directly to a teacher (convocation, free-form). Exactly one
+// of studentId/teacherId is set per row (recipientType says which) — a
+// class-wide or all-teachers send produces one row per recipient for a
+// clean, queryable history. EMAIL is delivered through the existing
+// EmailJob/EmailQueue pipeline (src/lib/server/queues) — `emailJobId` links
+// back to that row for live delivery status. SMS has no provider wired yet
+// (see src/lib/server/sms.ts): those rows are recorded with status
+// UNAVAILABLE so nothing is silently pretended to have sent.
+model SchoolMessage {
+  id            String    @id @default(cuid())
+  schoolId      String
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  recipientType String // STUDENT_PARENT | TEACHER
+  studentId     String?
+  student       Student?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId     String?
+  teacher       Teacher?  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  channel       String // EMAIL | SMS
+  templateType  String // ABSENCE | CONVOCATION | LIBRE
+  recipient     String // email address or phone number actually used
+  subject       String?
+  body          String
+  status        String    @default("PENDING") // PENDING | SENT | FAILED | UNAVAILABLE | SKIPPED
+  errorReason   String?
+  emailJobId    String?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([teacherId, createdAt])
+  @@index([status, createdAt])
+  @@index([schoolId])
+}
+
+// The "Observations du Conseil" free-text box on the bulletin (report card).
+// One row per student per term — the bulletin page used to compute this text
+// automatically from the average and show it read-only; it's now editable
+// and persisted here so the school can write an actual remark.
+model BulletinRemark {
+  id          String   @id @default(cuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  periode     String // T1 | T2 | T3
+  observation String   @default("")
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([studentId, periode])
+  @@index([schoolId])
+}
+
+model Teacher {
+  id                    String   @id @default(cuid())
+  schoolId              String
+  school                School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  nom                   String
+  prenom                String
+  email                 String?
+  telephone             String?
+  specialite            String? // no longer collected at registration; kept for older rows
+  statut                String   @default("TEMPS_PLEIN") // TEMPS_PLEIN | VACATAIRE
+  classesAssignees      String? // free-text, e.g. "5ème A, 5ème B, 4ème A"
+  // Superseded by `tauxHoraire` — teachers here are actually paid by the
+  // hour according to their emploi du temps, not a flat monthly amount.
+  // Kept for older rows; no longer read by the UI.
+  remunerationMensuelle Int? // smallest currency unit (GNF has no decimals)
+  // Hourly rate (GNF/heure) — drives the auto-calculated montant on
+  // Comptabilité > Paiement des enseignants (heures/semaine × 4 × taux).
+  tauxHoraire           Int?
+  createdAt             DateTime @default(now())
+
+  subjects           Subject[]
+  scheduleEntries    ScheduleEntry[]
+  payments           TeacherPayment[]
+  schoolMessages     SchoolMessage[]
+  teacherAssignments TeacherAssignment[]
+  // The login account for this teacher, if one has been created (see
+  // /settings/users) — most Teacher rows have none. Back-relation to
+  // User.teacherId.
+  user               User?
+
+  @@index([statut])
+  @@index([schoolId])
+}
+
+// One row per (teacher, pay period) — `periode` is a "YYYY-MM" month label.
+// The @@unique constraint is the real invariant here: it makes double-paying
+// the same teacher for the same month a database-level impossibility, not
+// just a UI nicety.
+model TeacherPayment {
+  id            String   @id @default(cuid())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherId     String
+  teacher       Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  periode       String // "YYYY-MM", e.g. "2026-09"
+  montant       Int // smallest currency unit (GNF has no decimals)
+  datePaiement  DateTime @default(now())
+  moyenPaiement String   @default("ESPECES") // WAVE | ORANGE_MONEY | ESPECES | VIREMENT
+  createdAt     DateTime @default(now())
+
+  @@unique([teacherId, periode])
+  @@index([teacherId])
+  @@index([periode])
+  @@index([schoolId])
+}
+
+// Annual tuition due, per class per school year (real schools price tuition
+// by grade level, not a flat school-wide fee). Drives the "montant dû /
+// payé / reste" balance shown on Comptabilité > Frais de scolarité.
+model TuitionPlan {
+  id            String      @id @default(cuid())
+  schoolId      String
+  school        School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId       String
+  schoolClass   SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  anneeScolaire String
+  montantAnnuel Int // smallest currency unit (GNF has no decimals)
+
+  @@unique([classId, anneeScolaire])
+  @@index([schoolId])
+}
+
+model Subject {
+  id            String   @id @default(cuid())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  nom           String
+  code          String // unique per school, see @@unique below
+  coefficient   Int      @default(1)
+  teacherId     String?
+  teacher       Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  classesText   String? // free-text list of classes it's taught to
+  volumeHoraire Int      @default(1) // hours/week
+  type          String? // e.g. "Fondamentale" | "Optionnelle"
+  createdAt     DateTime @default(now())
+
+  grades             Grade[]
+  scheduleEntries    ScheduleEntry[]
+  teacherAssignments TeacherAssignment[]
+
+  @@unique([schoolId, code])
+  @@index([teacherId])
+  @@index([schoolId])
+}
+
+// Real relational replacement for the free-text Teacher.classesAssignees /
+// Subject.classesText: "this teacher teaches this subject in this class."
+// This is the security ground truth for TEACHER-role scoping (see
+// src/lib/server/permissions/teacher-scope.ts) — classesText/classesAssignees
+// stay in place for existing display purposes but are no longer trusted for
+// access control. Backfilled once from the free-text fields by
+// scripts/backfill-teacher-assignments.ts; managed going forward via
+// /settings/users.
+model TeacherAssignment {
+  id          String      @id @default(cuid())
+  schoolId    String
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subjectId   String
+  subject     Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId     String
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+
+  @@unique([teacherId, subjectId, classId])
+  @@index([teacherId])
+  @@index([subjectId])
+  @@index([classId])
+  @@index([schoolId])
+}
+
+model Grade {
+  id            String      @id @default(cuid())
+  schoolId      String
+  school        School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId     String
+  subject       Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId       String
+  schoolClass   SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  periode       String      @default("T1") // T1 | T2 | T3
+  // Without this, "T1" for one year silently overwrote "T1" from any other
+  // year (unique constraint was only studentId+subjectId+periode) — grades
+  // couldn't be kept across school years at all. Defaults match
+  // Student.anneeScolaire's existing default so pre-migration rows land on
+  // the same year.
+  anneeScolaire String      @default("2024-2025")
+  valeur        Int // 0-20
+  createdAt     DateTime    @default(now())
+
+  @@unique([studentId, subjectId, periode, anneeScolaire])
+  @@index([classId, subjectId, periode, anneeScolaire])
+  @@index([schoolId])
+}
+
+model ScheduleEntry {
+  id          String      @id @default(cuid())
+  schoolId    String
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId     String
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacherId   String?
+  teacher     Teacher?    @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  jour        String // LUNDI | MARDI | MERCREDI | JEUDI | VENDREDI | SAMEDI
+  heureDebut  String // "08:00"
+  heureFin    String // "09:00"
+  createdAt   DateTime    @default(now())
+
+  @@index([jour])
+  @@index([classId])
+  @@index([schoolId])
+}
+
+model RevenuePayment {
+  id            String   @id @default(cuid())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  date          DateTime @default(now())
+  source        String // motif / description
+  montant       Int // smallest currency unit (GNF has no decimals)
+  statut        String   @default("Reçu")
+  studentId     String?
+  student       Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  moyenPaiement String   @default("ESPECES") // WAVE | ORANGE_MONEY | ESPECES
+  createdAt     DateTime @default(now())
+
+  // Accounting category — added for the Comptabilité menu (Inscription &
+  // Réinscription / Frais de scolarité pages) so those can query their own
+  // slice of the same ledger instead of duplicating a payments table.
+  // AUTRE keeps every pre-existing row (and the freeform /new-revenue flow)
+  // valid without a backfill.
+  categorie     String  @default("AUTRE") // INSCRIPTION | REINSCRIPTION | SCOLARITE | AUTRE
+  // Only meaningful for SCOLARITE: which installment this covers.
+  periode       String? // T1 | T2 | T3 | ANNUEL
+  // School year this payment applies to — lets the tuition balance
+  // (montant dû / payé / reste) be computed per year, independent of the
+  // calendar date the payment was actually received on.
+  anneeScolaire String?
+
+  // Sequential, human-readable receipt number ("REC-2026-00001"), assigned
+  // once — at creation for new inscription/réinscription/scolarité
+  // payments, or lazily on first receipt view for older rows that predate
+  // this feature — and never reassigned. This is what actually appears on
+  // the printed/PDF receipt a parent receives; the payment's own cuid is
+  // an internal id, not something a family should ever need to read out.
+  numeroRecu String? // unique per school, see @@unique below
+
+  @@unique([schoolId, numeroRecu])
+  @@index([date])
+  @@index([studentId])
+  @@index([categorie])
+  @@index([schoolId])
+}
+
+// One row per school (see src/lib/server/school-settings.ts) for the
+// school's identity, used on the bulletin (HTML page and PDF exports) and
+// the Paramètres > "Informations de l'établissement" form. Pre-multi-tenant
+// rows kept the fixed id "singleton" — harmless now that lookup is by
+// `schoolId`, not by `id`.
+model SchoolSettings {
+  id       String  @id @default(cuid())
+  schoolId String  @unique
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name     String  @default("Centre d'Excellence Académique")
+  type     String  @default("Collège-Lycée")
+  address  String  @default("Kindia, Région de Kindia, Guinée")
+  phone    String  @default("+224 622 123 456")
+  email    String  @default("contact@cea-kindia.edu.gn")
+  // Data URL (no Cloudinary configured yet — same approach as
+  // Student.photoUrl). PNG/JPEG only: the PDF export embeds this directly
+  // with pdfkit, which can't rasterize SVG.
+  logoUrl  String?
+
+  // Shown at the top of the student ID card (src/app/student-cards) — the
+  // only two card fields the admin edits directly, everything else on the
+  // card comes from each student's own record.
+  republiqueName String @default("RÉPUBLIQUE DE GUINÉE")
+  devise         String @default("Travail - Justice - Solidarité")
+
+  updatedAt DateTime @updatedAt
+}
