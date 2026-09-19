@@ -140,7 +140,7 @@ export function renderMessageTemplate(
       const eleve = `${vars.elevePrenom ?? ''} ${vars.eleveNom ?? ''}`.trim();
       if (locale === 'en') {
         return {
-          subject: `Meeting Request — ${eleve}`,
+          subject: `Meeting Request — Parent of ${eleve}`,
           body: [
             parentGreeting(vars, locale),
             '',
@@ -153,7 +153,7 @@ export function renderMessageTemplate(
         };
       }
       return {
-        subject: `Convocation — ${eleve}`,
+        subject: `Convocation — Parent de ${eleve}`,
         body: [
           parentGreeting(vars, locale),
           '',
