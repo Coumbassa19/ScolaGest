@@ -102,59 +102,7 @@ export default async function SettingsPage() {
                 <p className="text-sm text-muted-foreground mt-1">{t('calendar.subtitle')}</p>
               </div>
 
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:items-end">
-                  <AcademicYearControl />
-                  <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">
-                      {t('calendar.currentPeriodLabel')}
-                    </label>
-                    <div className="border border-border rounded-md px-3 py-2 flex items-center justify-between bg-background cursor-pointer">
-                      <span className="text-sm text-foreground">{t('calendar.term1')}</span>
-                      <Icon i="chevron-down" size={14} />
-                    </div>
-                  </div>
-                  <button className="px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md">
-                    {t('calendar.configure')}
-                  </button>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                    <div>
-                      <span className="text-sm font-semibold text-foreground">
-                        {t('calendar.term1')}
-                      </span>
-                      <p className="text-xs text-muted-foreground">{t('calendar.term1Range')}</p>
-                    </div>
-                    <button className="text-sm text-primary font-semibold">
-                      {t('calendar.edit')}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                    <div>
-                      <span className="text-sm font-semibold text-foreground">
-                        {t('calendar.term2')}
-                      </span>
-                      <p className="text-xs text-muted-foreground">{t('calendar.term2Range')}</p>
-                    </div>
-                    <button className="text-sm text-primary font-semibold">
-                      {t('calendar.edit')}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                    <div>
-                      <span className="text-sm font-semibold text-foreground">
-                        {t('calendar.term3')}
-                      </span>
-                      <p className="text-xs text-muted-foreground">{t('calendar.term3Range')}</p>
-                    </div>
-                    <button className="text-sm text-primary font-semibold">
-                      {t('calendar.edit')}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <AcademicYearControl />
             </div>
 
             {/* Section: Utilisateurs — ADMIN/SUPERADMIN only (see isAdmin above) */}
@@ -280,78 +228,28 @@ export default async function SettingsPage() {
                       {t('preferences.dateFormatLabel')}
                     </label>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {t('preferences.dateFormatSample')}
+                      {t('preferences.dateFormatFixed')}
                     </p>
                   </div>
-                  <div className="border border-border rounded-md px-3 py-2 flex items-center justify-between bg-background cursor-pointer min-w-32">
+                  <div className="border border-border rounded-md px-3 py-2 bg-muted min-w-32 text-center">
                     <span className="text-sm text-foreground">
                       {t('preferences.dateFormatSample')}
                     </span>
-                    <Icon i="chevron-down" size={14} />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-border">
-                  <div>
-                    <label className="text-sm font-semibold text-foreground">
-                      {t('preferences.notificationsLabel')}
-                    </label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {t('preferences.notificationsHint')}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="px-3 py-1.5 text-sm font-semibold text-foreground border border-border rounded-md bg-surface">
-                      {t('preferences.disable')}
-                    </button>
-                    <button className="px-3 py-1.5 text-sm font-semibold text-primary-foreground bg-primary rounded-md">
-                      {t('preferences.enable')}
-                    </button>
-                  </div>
-                </div>
+                {/* Notifications on/off — masqué pour l'instant, même raison que la
+                    section Données : jamais branché à un vrai backend, et il faut
+                    d'abord décider quels emails précisément ce réglage doit couvrir
+                    avant de le construire pour de vrai. */}
               </div>
             </div>
 
-            {/* Section: Données */}
-            <div className="bg-surface rounded-lg border border-border px-6 py-5">
-              <div className="mb-5 pb-5 border-b border-border">
-                <h2 className="text-lg font-headings font-semibold text-foreground">
-                  {t('data.title')}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">{t('data.subtitle')}</p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                  <div>
-                    <span className="text-sm font-semibold text-foreground">
-                      {t('data.lastBackup')}
-                    </span>
-                    <p className="text-xs text-muted-foreground">{t('data.lastBackupTimestamp')}</p>
-                  </div>
-                  <button className="px-3 py-1.5 text-sm font-semibold text-foreground border border-border rounded-md bg-surface">
-                    {t('data.download')}
-                  </button>
-                </div>
-
-                <div className="flex gap-3">
-                  <button className="flex-1 px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md">
-                    {t('data.backupNow')}
-                  </button>
-                  <button className="flex-1 px-4 py-2 text-sm font-semibold text-warning border border-warning rounded-md bg-surface">
-                    {t('data.restoreFromFile')}
-                  </button>
-                </div>
-
-                <div className="p-3 bg-secondary rounded-md">
-                  <p className="text-xs text-foreground font-semibold">{t('data.dangerZone')}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{t('data.dangerZoneHint')}</p>
-                  <button className="mt-2 px-4 py-1.5 text-xs font-semibold text-danger border border-danger rounded-md bg-surface">
-                    {t('data.deleteAllData')}
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Section: Données — masquée pour l'instant (sauvegarde/restauration/
+                suppression n'ont jamais été branchées à un vrai backend ; décision
+                explicite de l'utilisateur de reporter cette fonctionnalité à un
+                chantier dédié plutôt que d'exposer des boutons inertes ou une
+                version bâclée). Ré-activer + construire le backend quand demandé. */}
 
             {/* Section: Compte (real, backend-wired — preserved from the starter) */}
             <AccountSecuritySection />

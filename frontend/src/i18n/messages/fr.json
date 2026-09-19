@@ -27,7 +27,7 @@
   },
   "sidebar": {
     "dashboard": "Tableau de bord",
-    "studentsGroup": "Gestion des élèves",
+    "studentsGroup": "Gestion élèves",
     "studentsList": "Liste des élèves",
     "studentsAdd": "Inscrire un nouvel élève",
     "studentsReregister": "Inscrire un ancien élève",
@@ -151,8 +151,10 @@
         "OAUTH_CODE_EXCHANGE_FAILED": "Google a refusé la connexion. Réessayez dans un instant.",
         "OAUTH_PROVIDER_DISABLED": "La connexion via Google n'est pas activée sur ce serveur. Contactez le support.",
         "OAUTH_GENERIC": "Une erreur inattendue est survenue pendant la connexion. Réessayez.",
+        "GOOGLE_NO_ACCOUNT": "Aucun compte ScolaGest n'est associé à cette adresse Google. Créez d'abord un compte, ou connectez-vous avec votre email et mot de passe.",
         "unknown": "Une erreur inconnue est survenue pendant la connexion. Réessayez."
-      }
+      },
+      "createAccount": "Créer un compte"
     },
     "login": {
       "title": "Connexion",
@@ -164,7 +166,9 @@
       "submitting": "Connexion…",
       "submit": "Se connecter",
       "noAccount": "Pas encore de compte ?",
-      "createAccount": "Créer un compte"
+      "createAccount": "Créer un compte",
+      "orContinueWith": "ou continuer avec",
+      "continueWithGoogle": "Continuer avec Google"
     },
     "signup": {
       "title": "Créer le compte de votre école",
@@ -409,9 +413,12 @@
       "term1": "1er Trimestre",
       "term2": "2ème Trimestre",
       "term3": "3ème Trimestre",
-      "term1Range": "15 sept - 15 déc 2024",
-      "term2Range": "20 jan - 20 avr 2025",
-      "term3Range": "01 mai - 30 juin 2025"
+      "notConfigured": "Non configuré",
+      "startLabel": "Début",
+      "endLabel": "Fin",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler"
     },
     "users": {
       "title": "Utilisateurs",
@@ -473,6 +480,7 @@
       "languageLabel": "Langue",
       "languageHint": "Utilise le sélecteur FR / EN dans le menu latéral",
       "dateFormatLabel": "Format de date",
+      "dateFormatFixed": "Format fixe, utilisé dans toute l'application.",
       "dateFormatSample": "JJ/MM/AAAA",
       "notificationsLabel": "Notifications",
       "notificationsHint": "Alertes par email",

@@ -2,9 +2,10 @@
 //
 // Covers all D-06 redirect codes, state-mismatch / email_verified gates,
 // D-01 link path (existing email user gets OAuthAccount only — name/avatar
-// untouched), D-02 create path (new user inside $transaction with welcome
-// notification), 3-cookie issuance, ephemeral cookie clearing on every exit,
-// and a static NOTIF-05 source check (no direct prisma.notification.create).
+// untouched), GOOGLE_NO_ACCOUNT (no matching user — sign-in-only, never
+// auto-creates an orphan schoolId-less account), 3-cookie issuance,
+// ephemeral cookie clearing on every exit, and a static NOTIF-05 source
+// check (no direct prisma.notification.create).
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -231,53 +232,21 @@ describe('GET /api/auth/oauth/google/callback', () => {
     expect(mockCreateNotification).not.toHaveBeenCalled();
   });
 
-  it('D-02 create path: brand-new user → $transaction creates User + OAuthAccount; createNotification dispatched with welcomeNotification', async () => {
+  it('GOOGLE_NO_ACCOUNT: no matching OAuthAccount or User by email → redirect, no User/OAuthAccount created, no cookies', async () => {
     await seedCookie('app-oauth-state', STATE);
     await seedCookie('app-oauth-pkce', PKCE);
 
     prismaMock.oAuthAccount.findUnique.mockResolvedValue(null);
-    prismaMock.user.findUnique
-      .mockResolvedValueOnce(null) // by email — no existing user
-      .mockResolvedValueOnce({
-        id: 'u-new',
-        email: 'a@b.com',
-        tokenVersion: 0,
-      } as never); // re-fetch for token issuance
-    prismaMock.user.create.mockResolvedValue({ id: 'u-new' } as never);
-    prismaMock.oAuthAccount.create.mockResolvedValue({ id: 'oa-2' } as never);
+    prismaMock.user.findUnique.mockResolvedValueOnce(null); // by email — no existing user
 
     const res = await GET(makeReq({ code: 'c', state: STATE }));
     expect(res.status).toBe(302);
-    expect(res.headers.get('location')).not.toContain('/auth/error');
+    expect(res.headers.get('location')).toContain('/auth/error?code=GOOGLE_NO_ACCOUNT');
 
-    // $transaction was used for the create path.
-    expect(prismaMock.$transaction).toHaveBeenCalled();
-    expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
-    const userArg = prismaMock.user.create.mock.calls[0]?.[0];
-    expect(userArg?.data).toEqual(
-      expect.objectContaining({
-        email: 'a@b.com',
-        name: 'Alice',
-        avatarUrl: 'https://example.com/avatar.png',
-        passwordHash: null,
-      }),
-    );
-    expect(userArg?.data?.emailVerifiedAt).toBeInstanceOf(Date);
-
-    expect(prismaMock.oAuthAccount.create).toHaveBeenCalledTimes(1);
-
-    // 3 cookies + welcome notif via createNotification (NOTIF-05 wrapper).
-    expect(mockSetAuthCookies).toHaveBeenCalledWith('access-jwt', 'refresh-jwt');
-    expect(mockSetCsrfCookie).toHaveBeenCalledTimes(1);
-    expect(mockCreateNotification).toHaveBeenCalledTimes(1);
-    const notifInput = mockCreateNotification.mock.calls[0]?.[1];
-    expect(notifInput).toEqual(
-      expect.objectContaining({
-        userId: 'u-new',
-        type: 'WELCOME',
-        dedupeKey: 'welcome:u-new',
-      }),
-    );
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+    expect(prismaMock.oAuthAccount.create).not.toHaveBeenCalled();
+    expect(mockSetAuthCookies).not.toHaveBeenCalled();
+    expect(mockCreateNotification).not.toHaveBeenCalled();
   });
 
   it('existing OAuth user (provider lookup hits): no User update, no welcome, just 3 cookies', async () => {
@@ -362,9 +331,8 @@ describe('GET /api/auth/oauth/google/callback', () => {
     }
   });
 
-  it('NOTIF-05 source check: callback uses createNotification(, never prisma.notification.create(', () => {
+  it('source check: no direct prisma.notification.create(, runtime=nodejs, withRequestContext wired', () => {
     const src = fs.readFileSync(path.join(__dirname, 'route.ts'), 'utf8');
-    expect(src).toContain('createNotification(');
     expect(src).not.toMatch(/prisma\.notification\.create\(/);
     expect(src).toMatch(/export\s+const\s+runtime\s*=\s*['"]nodejs['"]/);
     expect(src).toContain('withRequestContext');

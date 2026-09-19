@@ -165,8 +165,10 @@
         "OAUTH_CODE_EXCHANGE_FAILED": "Google declined the sign-in request. Please try again in a moment.",
         "OAUTH_PROVIDER_DISABLED": "Sign-in with Google is not enabled on this server. Please contact support.",
         "OAUTH_GENERIC": "An unexpected error occurred during sign-in. Please try again.",
+        "GOOGLE_NO_ACCOUNT": "No ScolaGest account is linked to this Google address. Create an account first, or sign in with your email and password.",
         "unknown": "An unknown error occurred during sign-in. Please try again."
-      }
+      },
+      "createAccount": "Create an account"
     },
     "login": {
       "title": "Log In",
@@ -178,7 +180,9 @@
       "submitting": "Logging in…",
       "submit": "Log in",
       "noAccount": "Don't have an account yet?",
-      "createAccount": "Create an account"
+      "createAccount": "Create an account",
+      "orContinueWith": "or continue with",
+      "continueWithGoogle": "Continue with Google"
     },
     "signup": {
       "title": "Create your school's account",
@@ -423,9 +427,12 @@
       "term1": "Term 1",
       "term2": "Term 2",
       "term3": "Term 3",
-      "term1Range": "15 Sept - 15 Dec 2024",
-      "term2Range": "20 Jan - 20 Apr 2025",
-      "term3Range": "01 May - 30 Jun 2025"
+      "notConfigured": "Not configured",
+      "startLabel": "Start",
+      "endLabel": "End",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel"
     },
     "users": {
       "title": "Users",
@@ -487,6 +494,7 @@
       "languageLabel": "Language",
       "languageHint": "Use the FR / EN switch in the sidebar",
       "dateFormatLabel": "Date Format",
+      "dateFormatFixed": "Fixed format, used across the whole app.",
       "dateFormatSample": "DD/MM/YYYY",
       "notificationsLabel": "Notifications",
       "notificationsHint": "Email alerts",

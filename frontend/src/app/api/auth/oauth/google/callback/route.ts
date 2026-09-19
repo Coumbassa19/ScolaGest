@@ -9,14 +9,25 @@
 //      - other thrown errors      → OAUTH_GENERIC + log.error
 //   5. decodeIdToken(tokens.idToken()) — Pitfall 1: idToken is a METHOD, not a property
 //   6. claims.email_verified !== true → GOOGLE_EMAIL_NOT_VERIFIED (CRITICAL — D-05)
-//   7. Find-or-create:
+//   7. Find (never create):
 //      a. OAuthAccount.findUnique({ provider_providerAccountId }) — returning user
 //      b. else User.findUnique({ email }) — D-01 silent linking; leave User.name/avatarUrl untouched
-//      c. else $transaction → User + OAuthAccount; isNewUser = true
+//      c. else → GOOGLE_NO_ACCOUNT (see note below)
 //   8. setAuthCookies(access, refresh) + setCsrfCookie() — same as verify-email
-//   9. If isNewUser: createNotification(prisma, welcomeNotification(userId, email)) — NOTIF-05 invariant
-//   10. Consume app-oauth-next cookie (re-validate same-origin); fall back to APP_URL
-//   11. Clear ephemeral cookies; 302 redirect
+//   9. Consume app-oauth-next cookie (re-validate same-origin); fall back to APP_URL
+//   10. Clear ephemeral cookies; 302 redirect
+//
+// GOOGLE_NO_ACCOUNT (no create-on-sign-in): every User in this app must
+// belong to a School (multi-tenant — see requireStaff/requirePageAuth and
+// prisma.ts's TENANT_SCOPED_MODELS). The original pre-multi-tenant "D-02"
+// design auto-created a bare User (no School, no schoolId) for any
+// unmatched Google account — that predates the School model and was never
+// updated for it, so it silently produced orphan accounts that could reach
+// requireStaff with schoolId=null and an unscoped Prisma client. Google is
+// now sign-in-only: it can link/authenticate an EXISTING ScolaGest account
+// (by prior OAuthAccount row, or by matching email — D-01), never create
+// one. A school is only ever created through POST /api/schools/signup,
+// which creates School + first User together in one transaction.
 export const runtime = 'nodejs';
 
 import 'server-only';
@@ -32,8 +43,6 @@ import {
   createRefreshToken,
 } from '@/lib/server/auth';
 import { prisma } from '@/lib/server/prisma';
-import { createNotification } from '@/lib/server/notifications';
-import { welcomeNotification } from '@/lib/server/notifications/templates';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 import { log } from '@/lib/server/observability/log';
 
@@ -113,9 +122,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return redirectToAuthError('GOOGLE_EMAIL_NOT_VERIFIED', redirectOpts);
     }
 
-    // ───── Find-or-create ─────────────────────────────────────────────────
+    // ───── Find (never create — see GOOGLE_NO_ACCOUNT note above) ─────────
     let userId: string;
-    let isNewUser = false;
     const existingByProvider = await prisma.oAuthAccount.findUnique({
       where: {
         provider_providerAccountId: { provider: 'google', providerAccountId: claims.sub },
@@ -130,42 +138,23 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         where: { email: normalizedEmail },
         select: { id: true },
       });
-      if (existingByEmail) {
-        // D-01 silent linking — leave User.name/avatarUrl untouched
-        // (T-02-OAUTH-NAME-OVERWRITE mitigation).
-        await prisma.oAuthAccount.create({
-          data: {
-            userId: existingByEmail.id,
-            provider: 'google',
-            providerAccountId: claims.sub,
-          },
+      if (!existingByEmail) {
+        await clearEphemeralCookies();
+        log.info('oauth.callback: no matching account for Google email', {
+          sub: claims.sub,
         });
-        userId = existingByEmail.id;
-      } else {
-        // D-02 create path — User + OAuthAccount in a single $transaction
-        const created = await prisma.$transaction(async (tx) => {
-          const newUser = await tx.user.create({
-            data: {
-              email: normalizedEmail,
-              emailVerifiedAt: new Date(),
-              name: claims.name ?? null,
-              avatarUrl: claims.picture ?? null,
-              passwordHash: null,
-            },
-            select: { id: true },
-          });
-          await tx.oAuthAccount.create({
-            data: {
-              userId: newUser.id,
-              provider: 'google',
-              providerAccountId: claims.sub,
-            },
-          });
-          return newUser;
-        });
-        userId = created.id;
-        isNewUser = true;
+        return redirectToAuthError('GOOGLE_NO_ACCOUNT', redirectOpts);
       }
+      // D-01 silent linking — leave User.name/avatarUrl untouched
+      // (T-02-OAUTH-NAME-OVERWRITE mitigation).
+      await prisma.oAuthAccount.create({
+        data: {
+          userId: existingByEmail.id,
+          provider: 'google',
+          providerAccountId: claims.sub,
+        },
+      });
+      userId = existingByEmail.id;
     }
 
     // ───── Issue session cookies (mirrors verify-email/route.ts) ──────────
@@ -174,9 +163,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       select: { id: true, email: true, tokenVersion: true },
     });
     if (!u) {
-      // Defensive — should never happen since we just created/linked.
+      // Defensive — should never happen since we just resolved this user.
       await clearEphemeralCookies();
-      log.error('oauth.callback: user disappeared after create', { userId });
+      log.error('oauth.callback: user disappeared after link', { userId });
       return redirectToAuthError('OAUTH_GENERIC', redirectOpts);
     }
     const access = await createAccessToken({
@@ -187,12 +176,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const refresh = await createRefreshToken(u.id, u.tokenVersion);
     await setAuthCookies(access, refresh);
     await setCsrfCookie();
-
-    // D-03: welcome notification on first OAuth account creation.
-    // NOTIF-05 invariant — go through createNotification (never prisma.notification.create directly).
-    if (isNewUser) {
-      await createNotification(prisma, welcomeNotification(u.id, u.email));
-    }
 
     // Consume next cookie (defense-in-depth re-validation against same-origin).
     let target: string;
@@ -217,7 +200,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
 
     await clearEphemeralCookies();
-    log.info('oauth.callback: success', { userId: u.id, isNewUser });
+    log.info('oauth.callback: success', { userId: u.id });
     return NextResponse.redirect(target, 302);
   });
 }

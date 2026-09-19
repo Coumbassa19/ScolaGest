@@ -521,6 +521,17 @@ model AcademicYear {
   isCurrent Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  // Trimestre date ranges — nullable until the school configures them from
+  // Paramètres > Calendrier académique. Purely informational (drives the
+  // "période actuelle" display); the T1/T2/T3 strings used for grading
+  // (Grade.periode etc.) are unrelated free-text labels, not FKs to these.
+  term1Start DateTime?
+  term1End   DateTime?
+  term2Start DateTime?
+  term2End   DateTime?
+  term3Start DateTime?
+  term3End   DateTime?
+
   @@unique([schoolId, label])
   @@index([schoolId])
 }

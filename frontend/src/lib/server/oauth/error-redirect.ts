@@ -2,8 +2,11 @@
 //
 // Wave 1 OAuth callback (Plan 02-01) imports redirectToAuthError() to bail out
 // of failed code-exchange / unverified-email / state-mismatch paths to a
-// frontend `/auth/error?code=<CODE>` page. The five UPPERCASE codes here are
-// the D-06 contract (CONTEXT.md, locked) — never lowercase, never re-aliased.
+// frontend `/auth/error?code=<CODE>` page. The UPPERCASE codes here are the
+// D-06 contract (CONTEXT.md, locked) — never lowercase, never re-aliased.
+// GOOGLE_NO_ACCOUNT added when the callback stopped auto-creating orphan
+// (schoolId-less) users for unmatched Google accounts — see that route's
+// header comment.
 //
 // `isSameOriginNext` is the OAuth `?next=` validator. Pitfall 10 in
 // 02-RESEARCH.md documents the `//evil.com` open-redirect bypass: a permissive
@@ -15,6 +18,7 @@ import { NextResponse } from 'next/server';
 
 export type OAuthErrorCode =
   | 'GOOGLE_EMAIL_NOT_VERIFIED'
+  | 'GOOGLE_NO_ACCOUNT'
   | 'OAUTH_STATE_MISMATCH'
   | 'OAUTH_CODE_EXCHANGE_FAILED'
   | 'OAUTH_PROVIDER_DISABLED'
@@ -22,6 +26,7 @@ export type OAuthErrorCode =
 
 export const OAUTH_ERROR_CODES: readonly OAuthErrorCode[] = [
   'GOOGLE_EMAIL_NOT_VERIFIED',
+  'GOOGLE_NO_ACCOUNT',
   'OAUTH_STATE_MISMATCH',
   'OAUTH_CODE_EXCHANGE_FAILED',
   'OAUTH_PROVIDER_DISABLED',
