@@ -9,7 +9,7 @@
  *
  * Boots conditionally: if GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET /
  * GOOGLE_REDIRECT_URI are absent, `tryCreateGoogleProvider()` returns
- * undefined and the OAuth routes 404 silently — same pattern as Bictorys
+ * undefined and the OAuth routes 404 silently — same pattern as Moneroo
  * and R2 elsewhere.
  *
  * Required scopes: `openid email profile`. We only need the user's email

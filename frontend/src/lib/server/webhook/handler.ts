@@ -1,7 +1,7 @@
 /**
  * Idempotent webhook handler factory — Next.js port.
  *
- * Provider-agnostic. Each integration (Bictorys, Stripe, Paddle…)
+ * Provider-agnostic. Each integration (Moneroo, Stripe, Paddle…)
  * implements `WebhookProvider` with its own signature scheme + payload
  * parser. The handler then:
  *

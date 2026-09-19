@@ -1,5 +1,5 @@
 // POST /api/billing/subscribe — pay for (or renew) the school's own
-// ScolaGest subscription via Bictorys. Mirrors POST /api/orders' proven
+// ScolaGest subscription via Moneroo. Mirrors POST /api/orders' proven
 // sequence (idempotency, circuit breaker, PENDING-row-then-charge) closely
 // — this is the SAME payment provider, just charging the school for its own
 // platform subscription instead of a marketplace order.
@@ -8,14 +8,9 @@
 // planConfig() — see billing/constants.ts) — never client-supplied, so
 // there's nothing for a tampered request body to manipulate.
 //
-// UNVERIFIED MARKET COVERAGE: Bictorys' existing integration in this
-// codebase (src/lib/server/payments/bictorys.ts) was built and tested for
-// Senegal (country 'SN' was hardcoded before this route existed). Whether
-// Bictorys supports Guinea/GNF at all has not been confirmed — verify with
-// Bictorys before relying on this in production. SUBSCRIPTION_COUNTRY below
-// is passed as `metadata.country` so it's a one-constant change once that's
-// confirmed (or swap providers entirely — this route only depends on the
-// provider-agnostic `PaymentProvider` interface).
+// Moneroo natively routes GNF charges to Orange Money Guinée and MTN MoMo
+// Guinée — no extra config needed for Guinea coverage (unlike the earlier
+// Bictorys integration, whose Guinea/GNF support was never confirmed).
 export const runtime = 'nodejs';
 
 import 'server-only';
@@ -33,7 +28,6 @@ import {
 import { planConfig } from '@/lib/server/billing/constants';
 
 const SUBSCRIPTION_CURRENCY = 'GNF';
-const SUBSCRIPTION_COUNTRY = 'GN'; // see UNVERIFIED note above
 const IDEM_KEY_MAX_LEN = 200;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -57,7 +51,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const school = await prisma.school.findUnique({ where: { id: schoolId }, select: { plan: true } });
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { plan: true },
+    });
     const price = planConfig(school?.plan ?? 'CROISSANCE').priceGNF;
 
     const idemKey = req.headers.get('idempotency-key') ?? '';
@@ -114,7 +111,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         {
           error: 'PAYMENT_PROVIDER_UNAVAILABLE',
-          message: 'A previous attempt with this Idempotency-Key did not complete; submit a new key to retry.',
+          message:
+            'A previous attempt with this Idempotency-Key did not complete; submit a new key to retry.',
         },
         { status: 503, headers: { 'x-request-id': ctx.requestId } },
       );
@@ -150,7 +148,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         schoolId,
         amount: price,
         currency: SUBSCRIPTION_CURRENCY,
-        provider: 'bictorys',
+        provider: 'moneroo',
         status: 'PENDING',
         idempotencyKey: idemKey,
       },
@@ -164,7 +162,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           customer: {
             email: auth.user.email,
           },
-          metadata: { country: SUBSCRIPTION_COUNTRY },
           successUrl: `${appUrl}/billing?paid=1`,
           failureUrl: `${appUrl}/billing?failed=1`,
           externalRef: payment.id,

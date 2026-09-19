@@ -34,7 +34,7 @@ import { PrismaClient } from '@prisma/client';
 // by email BEFORE any schoolId is known — that lookup is what reveals it),
 // and `School`/`SchoolSubscriptionPayment` (the tables that describe a
 // tenant itself, resolved by their own id or read explicitly — e.g. from
-// the Bictorys webhook, which has no schoolId to scope by at all). Every
+// the Moneroo webhook, which has no schoolId to scope by at all). Every
 // other model (Order, WebhookLog, VerificationCode, …) is generic platform
 // infra scoped by userId, not by school.
 //
@@ -90,7 +90,10 @@ function uncapitalize(model: string): string {
 }
 
 interface OwnerLookupDelegate {
-  findUnique(args: { where: unknown; select: { schoolId: true } }): Promise<{ schoolId: string } | null>;
+  findUnique(args: {
+    where: unknown;
+    select: { schoolId: true };
+  }): Promise<{ schoolId: string } | null>;
 }
 
 /**
@@ -103,7 +106,7 @@ function buildClient(base: PrismaClient, schoolId: string | undefined) {
     if (!schoolId) {
       throw new Error(
         `Tenant-scoped query ${model}.${operation} ran on the unscoped prisma client — ` +
-          "use `const prisma = auth.prisma;` (from requireStaff/requirePageAuth) instead of the top-level import.",
+          'use `const prisma = auth.prisma;` (from requireStaff/requirePageAuth) instead of the top-level import.',
       );
     }
     return schoolId;
@@ -157,7 +160,9 @@ function buildClient(base: PrismaClient, schoolId: string | undefined) {
 
           if (SINGLE_MUTATE_OPS.has(operation) || operation === 'upsert') {
             const a = args as { where?: unknown; create?: Record<string, unknown> };
-            const delegate = base[uncapitalize(model) as keyof PrismaClient] as unknown as OwnerLookupDelegate;
+            const delegate = base[
+              uncapitalize(model) as keyof PrismaClient
+            ] as unknown as OwnerLookupDelegate;
             const owner = await delegate.findUnique({ where: a.where, select: { schoolId: true } });
             if (operation === 'upsert') {
               if (owner && owner.schoolId !== sid) {
@@ -174,7 +179,9 @@ function buildClient(base: PrismaClient, schoolId: string | undefined) {
 
           // Any other operation on a tenant-scoped model — fail closed
           // rather than silently run unscoped.
-          throw new Error(`Unhandled tenant-scoped operation ${model}.${operation} — extend prisma.ts.`);
+          throw new Error(
+            `Unhandled tenant-scoped operation ${model}.${operation} — extend prisma.ts.`,
+          );
         },
       },
     },
@@ -192,7 +199,8 @@ const base = global.__prismaBase ?? new PrismaClient();
 // Cast back to the plain `PrismaClient` type: the runtime object is the
 // $extends()-wrapped client, but its API surface is identical, and every
 // existing call site already expects the plain `PrismaClient` type.
-export const prisma: PrismaClient = global.__prisma ?? (buildClient(base, undefined) as unknown as PrismaClient);
+export const prisma: PrismaClient =
+  global.__prisma ?? (buildClient(base, undefined) as unknown as PrismaClient);
 
 /** Build a fresh Prisma client bound to `schoolId` — see file header. */
 export function scopedPrisma(schoolId: string): PrismaClient {

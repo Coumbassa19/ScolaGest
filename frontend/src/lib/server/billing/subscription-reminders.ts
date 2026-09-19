@@ -6,7 +6,7 @@
 //
 // Exactly-once per milestone: School.remindersSentDays accumulates which
 // milestones (15, 7, 1) have already been emailed for the CURRENT period,
-// and is reset to [] when the period is extended (see the Bictorys
+// and is reset to [] when the period is extended (see the Moneroo
 // webhook's onPaid), so re-running this daily doesn't re-spam the same
 // milestone and the next period gets its own fresh set of reminders.
 import 'server-only';

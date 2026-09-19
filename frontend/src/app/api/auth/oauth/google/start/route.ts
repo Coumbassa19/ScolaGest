@@ -3,7 +3,7 @@
 // Issues state + PKCE-verifier cookies (httpOnly, path /api/auth/oauth,
 // maxAge 300) and 302 redirects to Google's authorization URL. Inert
 // (404) when GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI is missing — same
-// env-gating pattern as Bictorys / R2 / Resend.
+// env-gating pattern as Moneroo / R2 / Resend.
 //
 // Optional ?next= echoes a same-origin path through `app-oauth-next` so
 // the callback can post-login redirect back to the originating page.
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   return withRequestContext(ctx, async () => {
     const provider = tryCreateGoogleProvider();
     if (!provider) {
-      // env-gated: 404 silently. Mirrors the Bictorys / R2 inert pattern.
+      // env-gated: 404 silently. Mirrors the Moneroo / R2 inert pattern.
       return NextResponse.json(
         { error: 'Not found' },
         { status: 404, headers: { 'x-request-id': ctx.requestId } },

@@ -1,12 +1,13 @@
 /**
- * POST /api/webhooks/bictorys — Bictorys payment webhook adapter.
+ * POST /api/webhooks/moneroo — Moneroo payment webhook adapter.
  *
  * Thin shim over the battle-tested factory at `lib/server/webhook/handler.ts`
  * (PROTECTED — never modified). The factory does ALL the hard work: raw-body
  * read via arrayBuffer, HMAC verify, Serializable transaction, WebhookLog
  * upsert + dedup, dispatch, processedAt write-back. This file only wires:
- *   - the Bictorys-specific WebhookProvider (HMAC + payload parser)
- *   - per-event handlers that update Order rows + emit outbox events
+ *   - the Moneroo-specific WebhookProvider (HMAC + payload parser)
+ *   - per-event handlers that update Order/SchoolSubscriptionPayment rows
+ *     and emit outbox events
  *
  * CLAUDE.md invariants honored here:
  *   - runtime = 'nodejs' is exported below (Buffer/crypto + Prisma — the
@@ -19,40 +20,32 @@
  *   - Side-effects use enqueueOutbox(tx, ...) INSIDE the same Serializable tx
  *     the factory opens — never via after-commit closures (D-04 outbox-not-
  *     closures invariant).
- *
- * Phase 5 / Plan 05-02. WH-01 + WH-02.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import 'server-only';
 import { createWebhookHandler } from '@/lib/server/webhook/handler';
-import { bictorysWebhookProvider } from '@/lib/server/webhook/bictorys';
+import { monerooWebhookProvider } from '@/lib/server/webhook/moneroo';
 import { enqueueOutbox } from '@/lib/server/outbox';
 import { prisma } from '@/lib/server/prisma';
 import { SUBSCRIPTION_PERIOD_MS } from '@/lib/server/billing/constants';
 
 export const POST = createWebhookHandler({
   prisma,
-  provider: bictorysWebhookProvider,
+  provider: monerooWebhookProvider,
 
   async onPaid(payload, tx) {
-    const externalRef = String(payload.charge_id ?? payload.chargeId ?? payload.id ?? '');
+    const externalRef = String(payload.data?.id ?? '');
     if (!externalRef) return {}; // no id to correlate
 
     const order = await tx.order.findFirst({
       where: { providerChargeId: externalRef },
     });
     if (order) {
-      const paymentMethod = payload.payment_method ? String(payload.payment_method) : null;
-
       await tx.order.update({
         where: { id: order.id },
-        data: {
-          status: 'PAID',
-          paidAt: new Date(),
-          ...(paymentMethod !== null ? { paymentMethod } : {}),
-        },
+        data: { status: 'PAID', paidAt: new Date() },
       });
 
       // Outbox emits stay inside the factory's Serializable tx so the rows
@@ -121,7 +114,7 @@ export const POST = createWebhookHandler({
   },
 
   async onRefunded(payload, tx) {
-    const externalRef = String(payload.charge_id ?? payload.chargeId ?? payload.id ?? '');
+    const externalRef = String(payload.data?.id ?? '');
     if (!externalRef) return {};
     const order = await tx.order.findFirst({
       where: { providerChargeId: externalRef },
@@ -132,8 +125,8 @@ export const POST = createWebhookHandler({
         data: { status: 'REFUNDED' },
       });
       // No outbox emit in v1 — `notification.refund_received` kind is not
-      // declared in outbox/types.ts (RESEARCH §"Pattern 1" + A6). Adding it
-      // would touch the PROTECTED dispatcher; deferred to a follow-up phase.
+      // declared in outbox/types.ts. Adding it would touch the PROTECTED
+      // dispatcher; deferred to a follow-up phase.
       return {};
     }
 
@@ -153,7 +146,7 @@ export const POST = createWebhookHandler({
   },
 
   async onFailed(payload, tx) {
-    const externalRef = String(payload.charge_id ?? payload.chargeId ?? payload.id ?? '');
+    const externalRef = String(payload.data?.id ?? '');
     if (!externalRef) return {};
     const order = await tx.order.findFirst({
       where: { providerChargeId: externalRef },

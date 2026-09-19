@@ -5,13 +5,13 @@
 //   - mockNextCookies() for next/headers async cookies()
 //   - vi.mock('@/lib/server/middleware') so requireAuth is per-test controllable
 //   - vi.mock('@/lib/server/payments/provider-singleton') so getProvider()
-//     returns a stub PaymentProvider instead of trying to read BICTORYS_* env
+//     returns a stub PaymentProvider instead of trying to read MONEROO_* env
 //
 // Coverage maps to plan acceptance + Wave 0 scaffolds:
 //   happy path:     creates Order + returns 201 + paymentUrl, persists with idempotencyKey
 //   idempotency:    replay same key → prior 200 row; missing key → 400
 //   circuit:        CircuitOpenError → 503 PAYMENT_PROVIDER_UNAVAILABLE + Retry-After + Order FAILED
-//   config guard:   BICTORYS env missing → 503 PAYMENT_PROVIDER_UNCONFIGURED (Pitfall 7)
+//   config guard:   MONEROO env missing → 503 PAYMENT_PROVIDER_UNCONFIGURED (Pitfall 7)
 //   validation:     non-int amount + negative amount → 400 VALIDATION_FAILED
 //   auth:           requireAuth bails → 401 (D-PAY-03 — no guest checkout in v1)
 import { prismaMock } from '@/test-utils/prisma-mock';
@@ -98,7 +98,7 @@ function seededOrder(over: Partial<Record<string, unknown>> = {}) {
     customerName: null,
     metadata: null,
     idempotencyKey: 'idem-key-1',
-    provider: 'bictorys',
+    provider: 'moneroo',
     providerChargeId: null,
     paymentUrl: null,
     paymentMethod: null,
@@ -115,17 +115,16 @@ function seededOrder(over: Partial<Record<string, unknown>> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   // Default — env present so getProvider() succeeds, requireAuth returns user.
-  process.env.BICTORYS_API_URL = 'https://api.test.bictorys.local';
-  process.env.BICTORYS_API_KEY = 'test-key';
-  process.env.BICTORYS_WEBHOOK_SECRET = 'test-webhook-secret';
+  process.env.MONEROO_SECRET_KEY = 'test-secret-key';
+  process.env.MONEROO_WEBHOOK_SECRET = 'test-webhook-secret';
   process.env.PUBLIC_URL = 'http://localhost:3000';
 
   mockRequireAuth.mockResolvedValue(authedCtx);
   mockGetProvider.mockReturnValue({
-    name: 'bictorys',
+    name: 'moneroo',
     charge: vi.fn(async () => ({
-      providerChargeId: 'bictorys_charge_test_1',
-      paymentUrl: 'https://checkout.test/bictorys/pay/test',
+      providerChargeId: 'moneroo_charge_test_1',
+      paymentUrl: 'https://checkout.test/moneroo/pay/test',
       status: 'PENDING' as const,
     })),
   } as never);
@@ -139,8 +138,8 @@ describe('POST /api/orders [Wave 1] — happy path', () => {
     prismaMock.order.create.mockResolvedValue(seededOrder() as never);
     prismaMock.order.update.mockResolvedValue(
       seededOrder({
-        providerChargeId: 'bictorys_charge_test_1',
-        paymentUrl: 'https://checkout.test/bictorys/pay/test',
+        providerChargeId: 'moneroo_charge_test_1',
+        paymentUrl: 'https://checkout.test/moneroo/pay/test',
       }) as never,
     );
 
@@ -152,7 +151,7 @@ describe('POST /api/orders [Wave 1] — happy path', () => {
     const body = await res.json();
     expect(body).toMatchObject({
       id: 'order_seed_1',
-      paymentUrl: 'https://checkout.test/bictorys/pay/test',
+      paymentUrl: 'https://checkout.test/moneroo/pay/test',
       status: 'PENDING',
     });
     expect(prismaMock.order.create).toHaveBeenCalledOnce();
@@ -177,7 +176,7 @@ describe('POST /api/orders [Wave 1] — happy path', () => {
       userId: 'user-1',
       amount: 5000,
       currency: 'XOF',
-      provider: 'bictorys',
+      provider: 'moneroo',
       status: 'PENDING',
       idempotencyKey: 'unique-idem-1',
       metadata: { source: 'web' },
@@ -187,8 +186,8 @@ describe('POST /api/orders [Wave 1] — happy path', () => {
     expect(prismaMock.order.update).toHaveBeenCalledOnce();
     const updateArgs = prismaMock.order.update.mock.calls[0]?.[0];
     expect(updateArgs?.data).toMatchObject({
-      providerChargeId: 'bictorys_charge_test_1',
-      paymentUrl: 'https://checkout.test/bictorys/pay/test',
+      providerChargeId: 'moneroo_charge_test_1',
+      paymentUrl: 'https://checkout.test/moneroo/pay/test',
     });
   });
 });
@@ -200,7 +199,7 @@ describe('POST /api/orders [Wave 1] — idempotency', () => {
       seededOrder({
         id: 'order_existing',
         idempotencyKey: 'replay-key',
-        paymentUrl: 'https://checkout.test/bictorys/pay/existing',
+        paymentUrl: 'https://checkout.test/moneroo/pay/existing',
       }) as never,
     );
 
@@ -212,7 +211,7 @@ describe('POST /api/orders [Wave 1] — idempotency', () => {
     const body = await res.json();
     expect(body).toMatchObject({
       id: 'order_existing',
-      paymentUrl: 'https://checkout.test/bictorys/pay/existing',
+      paymentUrl: 'https://checkout.test/moneroo/pay/existing',
       status: 'PENDING',
     });
     // No new charge attempted
@@ -329,7 +328,7 @@ describe('POST /api/orders [Wave 1] — idempotency', () => {
         amount: 1000,
         currency: 'XOF',
         idempotencyKey: 'replay-hash-match',
-        paymentUrl: 'https://checkout.test/bictorys/pay/existing',
+        paymentUrl: 'https://checkout.test/moneroo/pay/existing',
         metadata: { idempotencyBodyHash: hash } as never,
       }) as never,
     );
@@ -412,7 +411,7 @@ describe('POST /api/orders [Wave 1] — circuit breaker', () => {
 
     const retryAt = new Date(Date.now() + 60_000);
     mockExecute.mockImplementationOnce(async () => {
-      throw new CircuitOpenError('bictorys.charge', retryAt);
+      throw new CircuitOpenError('moneroo.charge', retryAt);
     });
 
     const res = await POST(
@@ -433,7 +432,7 @@ describe('POST /api/orders [Wave 1] — circuit breaker', () => {
 });
 
 describe('POST /api/orders [Wave 1] — config guards', () => {
-  it('POST without BICTORYS_API_KEY returns 503 PAYMENT_PROVIDER_UNCONFIGURED', async () => {
+  it('POST without MONEROO_SECRET_KEY returns 503 PAYMENT_PROVIDER_UNCONFIGURED', async () => {
     prismaMock.order.findUnique.mockResolvedValue(null as never);
     // Simulate Pitfall 7 — getProvider throws because env was wiped.
     mockGetProvider.mockImplementationOnce(() => {

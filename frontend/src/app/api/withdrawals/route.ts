@@ -149,7 +149,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               currency,
               status: 'PENDING',
               destination: destination as Prisma.InputJsonValue,
-              provider: 'bictorys',
+              provider: 'moneroo',
             },
             select: {
               id: true,

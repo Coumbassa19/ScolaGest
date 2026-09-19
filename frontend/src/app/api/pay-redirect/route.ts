@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * Same-domain proxy redirect for restrictive in-app browsers (TikTok,
  * Instagram, Facebook). The TikTok WebView scans query params for known
- * payment hostnames (pay.wave.com, pay.bictorys.com, etc.) and blocks
+ * payment hostnames (pay.wave.com, checkout.moneroo.io, etc.) and blocks
  * the request before it reaches the network. Encoding the URL in
  * Base64 + serving a 302 from our own origin sidesteps that scanner.
  *
@@ -24,7 +24,7 @@ const ALLOWED_DOMAINS: readonly string[] = [
   'checkout.bfrpay.com',
   'checkout.bfrpay.net',
   'pay.bfrpay.com',
-  'bictorys.com', // covers pay.bictorys.com + api.test.bictorys.com
+  'moneroo.io', // covers checkout.moneroo.io + api.moneroo.io
   'orange-money-prod-flowlinks.web.app',
   'sugu.orange-sonatel.com',
 ];

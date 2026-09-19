@@ -120,7 +120,7 @@ export function seedOrder(overrides: OrderOverrides = {}): Order {
     customerName: null,
     metadata: (overrides.metadata ?? null) as Prisma.JsonValue,
     idempotencyKey: overrides.idempotencyKey ?? null,
-    provider: overrides.provider ?? 'bictorys',
+    provider: overrides.provider ?? 'moneroo',
     providerChargeId: overrides.providerChargeId ?? null,
     paymentUrl: overrides.paymentUrl ?? null,
     paymentMethod: null,
@@ -257,28 +257,28 @@ export function mockRedis(map: Record<string, string | number> = {}): MockRedisS
  * ChargeResult; pass `{ openCircuit: true }` to make `.charge()` reject so
  * the CircuitBreaker can be exercised.
  */
-export interface MockBictorysOptions {
+export interface MockMonerooOptions {
   openCircuit?: boolean;
   chargeResult?: ChargeResult;
   chargeError?: Error;
 }
 
-export function mockBictorysProvider(
-  opts: MockBictorysOptions = {},
+export function mockMonerooProvider(
+  opts: MockMonerooOptions = {},
 ): PaymentProvider & { charge: ReturnType<typeof vi.fn> } {
   const charge = opts.openCircuit
     ? vi.fn(async () => {
         throw opts.chargeError ?? new Error('upstream provider failure');
       })
     : vi.fn(async () => ({
-        providerChargeId: 'bictorys_charge_test_1',
-        paymentUrl: 'https://checkout.test/bictorys/pay/test',
+        providerChargeId: 'moneroo_charge_test_1',
+        paymentUrl: 'https://checkout.moneroo.io/test',
         status: 'PENDING' as const,
         ...(opts.chargeResult ?? {}),
       }));
 
   return {
-    name: 'bictorys',
+    name: 'moneroo',
     charge,
   };
 }
@@ -354,7 +354,7 @@ export function seedWithdrawal(overrides: WithdrawalOverrides = {}): Withdrawal 
       method: 'WAVE',
       phone: '+221770000001',
     }) as Prisma.JsonValue,
-    provider: overrides.provider ?? 'bictorys',
+    provider: overrides.provider ?? 'moneroo',
     providerPayoutId: overrides.providerPayoutId ?? null,
     failureReason: overrides.failureReason ?? null,
     requestedAt: overrides.requestedAt ?? FROZEN_NOW,

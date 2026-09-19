@@ -326,7 +326,7 @@ model Order {
   idempotencyKey String? @unique
 
   // Provider reference
-  provider         String // e.g. "bictorys"
+  provider         String // e.g. "moneroo"
   providerChargeId String? @unique
   paymentUrl       String? // checkout/redirect URL returned by provider
   paymentMethod    String? // WAVE | ORANGE_MONEY | FREE_MONEY (set on PAID by webhook)
@@ -356,7 +356,7 @@ model Withdrawal {
   destination Json // { method: "WAVE" | "ORANGE_MONEY" | ..., phone: "+221...", accountName?: "..." }
 
   // Provider reference
-  provider         String // e.g. "bictorys"
+  provider         String // e.g. "moneroo"
   providerPayoutId String? @unique
   failureReason    String?
 
@@ -382,7 +382,7 @@ model Withdrawal {
 // Billing: `status` reflects the subscription lifecycle — TRIALING (new
 // signup, `trialEndsAt` not yet passed), ACTIVE (paid, `currentPeriodEnd`
 // not yet passed), PAST_DUE (trial or paid period lapsed — access blocked,
-// see requireStaff/requirePageAuth). Bictorys has no native recurring
+// see requireStaff/requirePageAuth). Moneroo has no native recurring
 // billing, so a successful charge just extends `currentPeriodEnd`; see
 // Phase 3 (SchoolSubscriptionPayment, /api/billing/subscribe).
 // ───────────────────────────────────────────────────────────────────────
@@ -405,7 +405,7 @@ model School {
   // Which reminder milestones (days-before-expiry — 15, 7, 1) have already
   // been emailed for the CURRENT trial/subscription period, so the daily
   // cron sends each milestone exactly once rather than every day until
-  // expiry. Reset to [] whenever the period is extended (see the Bictorys
+  // expiry. Reset to [] whenever the period is extended (see the Moneroo
   // webhook's onPaid) so the next period gets its own set of reminders.
   remindersSentDays Int[] @default([])
 
@@ -443,7 +443,7 @@ model School {
 // from its students. Not tenant-scoped (see prisma.ts's TENANT_SCOPED_MODELS
 // header comment) for the same reason School itself isn't: this describes
 // the tenant's relationship with the platform, resolved by schoolId/id
-// directly rather than auto-filtered — notably from the Bictorys webhook,
+// directly rather than auto-filtered — notably from the Moneroo webhook,
 // which has no ambient schoolId to scope by at all.
 model SchoolSubscriptionPayment {
   id       String @id @default(cuid())
@@ -451,12 +451,12 @@ model SchoolSubscriptionPayment {
   school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   amount   Int // gross amount, smallest unit
-  currency String // ISO 4217 — see the billing route's header comment re: GNF/Bictorys support
+  currency String // ISO 4217 — see the billing route's header comment re: Moneroo GNF support
   status   String @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
 
   // Stripe-grade idempotency, same pattern as Order.idempotencyKey.
   idempotencyKey   String  @unique
-  provider         String // e.g. "bictorys"
+  provider         String // e.g. "moneroo"
   providerChargeId String? @unique
   paymentUrl       String? // checkout/redirect URL returned by provider
 

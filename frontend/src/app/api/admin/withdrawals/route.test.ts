@@ -84,7 +84,7 @@ function wrow(overrides: Partial<WRow> = {}): WRow {
     currency: overrides.currency ?? 'XOF',
     status: overrides.status ?? 'PENDING',
     destination: overrides.destination ?? { method: 'WAVE', phone: '+221770000000' },
-    provider: overrides.provider ?? 'bictorys',
+    provider: overrides.provider ?? 'moneroo',
     providerPayoutId: overrides.providerPayoutId ?? null,
     failureReason: overrides.failureReason ?? null,
     requestedAt: overrides.requestedAt ?? new Date('2026-05-01T00:00:00Z'),

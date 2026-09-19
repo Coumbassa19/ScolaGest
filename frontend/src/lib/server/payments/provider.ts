@@ -1,7 +1,7 @@
 /**
  * Provider-agnostic payments interface.
  *
- * Each provider (Bictorys, Stripe, Paddle…) implements `PaymentProvider`.
+ * Each provider (Moneroo, Stripe, Paddle…) implements `PaymentProvider`.
  * The orders/withdrawals routes consume the interface — never the concrete
  * adapter — so swapping providers is one wiring change in `index.ts`.
  *

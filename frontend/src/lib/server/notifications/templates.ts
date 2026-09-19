@@ -33,7 +33,7 @@ export function welcomeNotification(userId: string, email: string): CreateNotifi
 
 /**
  * Example: notification dispatched after a successful payment.
- * Called from the Bictorys webhook handler's `onPaid` post-commit hook.
+ * Called from the Moneroo webhook handler's `onPaid` post-commit hook.
  */
 export function paymentReceived(
   userId: string,
