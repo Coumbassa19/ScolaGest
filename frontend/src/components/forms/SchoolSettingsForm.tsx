@@ -23,6 +23,10 @@ export interface SchoolSettingsData {
   logoUrl: string | null;
   republiqueName: string;
   devise: string;
+  ministryName: string;
+  flagUrl: string | null;
+  featuredOnHomepage: boolean;
+  homepageLogoUrl: string | null;
 }
 
 const MAX_LOGO_BYTES = 500_000;
@@ -52,9 +56,15 @@ export default function SchoolSettingsForm({ initialData }: { initialData: Schoo
   const [logoUrl, setLogoUrl] = useState(initialData.logoUrl ?? '');
   const [republiqueName, setRepubliqueName] = useState(initialData.republiqueName);
   const [devise, setDevise] = useState(initialData.devise);
+  const [ministryName, setMinistryName] = useState(initialData.ministryName);
+  const [flagUrl, setFlagUrl] = useState(initialData.flagUrl ?? '');
+  const [featuredOnHomepage, setFeaturedOnHomepage] = useState(initialData.featuredOnHomepage);
+  const [homepageLogoUrl, setHomepageLogoUrl] = useState(initialData.homepageLogoUrl ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const flagInputRef = useRef<HTMLInputElement>(null);
+  const homepageLogoInputRef = useRef<HTMLInputElement>(null);
 
   function resetToInitial() {
     setName(initialData.name);
@@ -65,9 +75,15 @@ export default function SchoolSettingsForm({ initialData }: { initialData: Schoo
     setLogoUrl(initialData.logoUrl ?? '');
     setRepubliqueName(initialData.republiqueName);
     setDevise(initialData.devise);
+    setMinistryName(initialData.ministryName);
+    setFlagUrl(initialData.flagUrl ?? '');
+    setFeaturedOnHomepage(initialData.featuredOnHomepage);
+    setHomepageLogoUrl(initialData.homepageLogoUrl ?? '');
     setError(null);
     setSaved(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (flagInputRef.current) flagInputRef.current.value = '';
+    if (homepageLogoInputRef.current) homepageLogoInputRef.current.value = '';
   }
 
   async function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
@@ -92,6 +108,50 @@ export default function SchoolSettingsForm({ initialData }: { initialData: Schoo
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
+  async function onFlagChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      setError(t('errorInvalidLogoType'));
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setError(t('errorLogoTooLarge'));
+      return;
+    }
+    setError(null);
+    setSaved(false);
+    setFlagUrl(await readFileAsDataUrl(file));
+  }
+
+  function onRemoveFlag() {
+    setFlagUrl('');
+    setSaved(false);
+    if (flagInputRef.current) flagInputRef.current.value = '';
+  }
+
+  async function onHomepageLogoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      setError(t('errorInvalidLogoType'));
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setError(t('errorLogoTooLarge'));
+      return;
+    }
+    setError(null);
+    setSaved(false);
+    setHomepageLogoUrl(await readFileAsDataUrl(file));
+  }
+
+  function onRemoveHomepageLogo() {
+    setHomepageLogoUrl('');
+    setSaved(false);
+    if (homepageLogoInputRef.current) homepageLogoInputRef.current.value = '';
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -103,9 +163,14 @@ export default function SchoolSettingsForm({ initialData }: { initialData: Schoo
       !phone.trim() ||
       !email.trim() ||
       !republiqueName.trim() ||
-      !devise.trim()
+      !devise.trim() ||
+      !ministryName.trim()
     ) {
       setError(t('errorRequiredFields'));
+      return;
+    }
+    if (featuredOnHomepage && !homepageLogoUrl) {
+      setError(t('errorHomepageLogoRequired'));
       return;
     }
 
@@ -122,6 +187,10 @@ export default function SchoolSettingsForm({ initialData }: { initialData: Schoo
           logoUrl: logoUrl || null,
           republiqueName: republiqueName.trim(),
           devise: devise.trim(),
+          ministryName: ministryName.trim(),
+          flagUrl: flagUrl || null,
+          featuredOnHomepage,
+          homepageLogoUrl: homepageLogoUrl || null,
         },
       });
       setSaved(true);
@@ -253,9 +322,9 @@ export default function SchoolSettingsForm({ initialData }: { initialData: Schoo
           />
         </div>
 
-        {/* Carte d'identité scolaire — only these two fields are editable;
-            everything else on the card (photo, nom, classe, matricule…)
-            comes straight from each student's own record. */}
+        {/* Carte d'identité scolaire — everything else on the card (photo,
+            nom, classe, matricule…) comes straight from each student's own
+            record. */}
         <div className="pt-3 border-t border-border">
           <p className="text-sm font-semibold text-foreground mb-1">{t('cardSectionTitle')}</p>
           <p className="text-xs text-muted-foreground mb-3">{t('cardSectionHint')}</p>
@@ -285,6 +354,119 @@ export default function SchoolSettingsForm({ initialData }: { initialData: Schoo
               />
             </div>
           </div>
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              {t('ministryNameLabel')}
+            </label>
+            <input
+              type="text"
+              required
+              value={ministryName}
+              onChange={(e) => setMinistryName(e.target.value)}
+              className={fieldClass}
+            />
+            <p className="text-xs text-muted-foreground mt-1">{t('ministryNameHint')}</p>
+          </div>
+
+          {/* Drapeau — remplace les 3 bandes du drapeau guinéen par défaut,
+              pour une école utilisant ScolaGest dans un autre pays. */}
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              {t('flagLabel')}
+            </label>
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-11 bg-muted rounded-md flex items-center justify-center border-2 border-dashed border-border overflow-hidden flex-shrink-0">
+                {flagUrl ? (
+                  // data: URL — next/image can't optimize it, a plain <img> is correct here.
+                  <img src={flagUrl} alt={t('flagLabel')} className="w-full h-full object-cover" />
+                ) : (
+                  <Icon i="flag" size={20} className="text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1 flex flex-col gap-2">
+                <label className="border-2 border-dashed border-border rounded-md px-3 py-2 text-center cursor-pointer hover:bg-input block">
+                  <div className="flex items-center justify-center gap-2">
+                    <Icon i="upload" size={16} className="text-primary" />
+                    <p className="text-sm font-semibold text-foreground">{t('uploadCta')}</p>
+                  </div>
+                  <input
+                    ref={flagInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={onFlagChange}
+                    className="hidden"
+                  />
+                </label>
+                {flagUrl && (
+                  <button
+                    type="button"
+                    onClick={onRemoveFlag}
+                    className="self-start text-xs text-danger font-semibold"
+                  >
+                    {t('removeLogo')}
+                  </button>
+                )}
+                <p className="text-xs text-muted-foreground">{t('flagHint')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Vitrine page d'accueil — indépendant du logo du bulletin ci-dessus.
+            Reste caché sur la page publique tant qu'il n'y a pas assez
+            d'écoles inscrites (voir t('homepageSectionHint')). */}
+        <div className="pt-3 border-t border-border">
+          <p className="text-sm font-semibold text-foreground mb-1">{t('homepageSectionTitle')}</p>
+          <p className="text-xs text-muted-foreground mb-3">{t('homepageSectionHint')}</p>
+          <div className="flex items-start gap-4 mb-4">
+            <div className="w-24 h-24 bg-muted rounded-md flex items-center justify-center border-2 border-dashed border-border overflow-hidden flex-shrink-0">
+              {homepageLogoUrl ? (
+                <img
+                  src={homepageLogoUrl}
+                  alt={t('logoAlt')}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <Icon i="image" size={32} className="text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex-1 flex flex-col gap-3">
+              <label className="border-2 border-dashed border-border rounded-md px-4 py-4 text-center cursor-pointer hover:bg-input block">
+                <div className="flex items-center justify-center gap-2">
+                  <Icon i="upload" size={18} className="text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{t('uploadCta')}</p>
+                    <p className="text-xs text-muted-foreground">{t('uploadHint')}</p>
+                  </div>
+                </div>
+                <input
+                  ref={homepageLogoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={onHomepageLogoChange}
+                  className="hidden"
+                />
+              </label>
+              {homepageLogoUrl && (
+                <button
+                  type="button"
+                  onClick={onRemoveHomepageLogo}
+                  className="self-start text-xs text-danger font-semibold"
+                >
+                  {t('removeLogo')}
+                </button>
+              )}
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={featuredOnHomepage}
+              onChange={(e) => setFeaturedOnHomepage(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            {t('featuredOnHomepageLabel')}
+          </label>
         </div>
 
         {error && (

@@ -384,6 +384,10 @@
       "cardSectionHint": "Affichés en haut de la carte — voir Gestion des élèves > Cartes scolaires",
       "republicNameLabel": "Nom de la République :",
       "deviseLabel": "Devise :",
+      "ministryNameLabel": "Ministère :",
+      "ministryNameHint": "Affiché sur la carte, juste en dessous de la devise.",
+      "flagLabel": "Drapeau national",
+      "flagHint": "Remplace les 3 bandes du drapeau guinéen affichées par défaut sur la carte.",
       "cancel": "Annuler",
       "save": "Modifier",
       "saving": "Enregistrement…",
@@ -391,7 +395,11 @@
       "errorInvalidLogoType": "Choisis une image PNG ou JPG (le SVG ne peut pas être utilisé dans les PDF).",
       "errorLogoTooLarge": "Image trop lourde (max 500 Ko). Choisis un logo plus léger.",
       "errorRequiredFields": "Tous les champs (sauf le type) sont obligatoires.",
-      "errorNetwork": "Erreur réseau. Réessaie."
+      "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorHomepageLogoRequired": "Ajoute un logo avant d'activer l'affichage sur la page d'accueil.",
+      "homepageSectionTitle": "Apparaître sur la page d'accueil",
+      "homepageSectionHint": "Ton logo n'apparaît sur la page d'accueil publique qu'une fois qu'au moins 3 écoles ont activé cette option — c'est normal si tu ne le vois pas tout de suite après avoir coché la case.",
+      "featuredOnHomepageLabel": "Afficher le logo de mon école sur la page d'accueil publique de ScolaGest"
     },
     "academicYear": {
       "currentLabel": "Année en cours :",
@@ -1316,7 +1324,9 @@
       "dobLabel": "Née le",
       "sexLabel": "Sexe",
       "classLabel": "Classe",
-      "contactLabel": "Contact"
+      "lostCardLabel": "Si trouvée",
+      "verifiedLabel": "Vérifié",
+      "flagAlt": "Drapeau national"
     }
   },
   "revenue": {

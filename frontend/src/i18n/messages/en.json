@@ -398,6 +398,10 @@
       "cardSectionHint": "Shown at the top of the card — see Student Management > Student ID Cards",
       "republicNameLabel": "Republic name:",
       "deviseLabel": "National motto:",
+      "ministryNameLabel": "Ministry:",
+      "ministryNameHint": "Shown on the card, just below the motto.",
+      "flagLabel": "National flag",
+      "flagHint": "Replaces the default 3-stripe Guinea flag shown on the card.",
       "cancel": "Cancel",
       "save": "Update",
       "saving": "Saving…",
@@ -405,7 +409,11 @@
       "errorInvalidLogoType": "Choose a PNG or JPG image (SVG cannot be used in PDF exports).",
       "errorLogoTooLarge": "Image too large (500 KB maximum). Choose a lighter logo.",
       "errorRequiredFields": "All fields (except Type) are required.",
-      "errorNetwork": "Network error. Please try again."
+      "errorNetwork": "Network error. Please try again.",
+      "errorHomepageLogoRequired": "Add a logo before enabling display on the homepage.",
+      "homepageSectionTitle": "Appear on the homepage",
+      "homepageSectionHint": "Your logo only appears on the public homepage once at least 3 schools have enabled this option — it's normal not to see it right after checking the box.",
+      "featuredOnHomepageLabel": "Show my school's logo on ScolaGest's public homepage"
     },
     "academicYear": {
       "currentLabel": "Current academic year:",
@@ -1330,7 +1338,9 @@
       "dobLabel": "Date of Birth",
       "sexLabel": "Gender",
       "classLabel": "Class",
-      "contactLabel": "Contact"
+      "lostCardLabel": "If found",
+      "verifiedLabel": "Verified",
+      "flagAlt": "National flag"
     }
   },
   "revenue": {

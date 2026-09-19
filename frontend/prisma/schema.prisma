@@ -890,11 +890,17 @@ model SchoolSettings {
   // with pdfkit, which can't rasterize SVG.
   logoUrl  String?
 
-  // Shown at the top of the student ID card (src/app/student-cards) — the
-  // only two card fields the admin edits directly, everything else on the
-  // card comes from each student's own record.
-  republiqueName String @default("RÉPUBLIQUE DE GUINÉE")
-  devise         String @default("Travail - Justice - Solidarité")
+  // Shown at the top of the student ID card (src/app/student-cards) —
+  // editable so a school outside Guinea can replace the national identity
+  // shown on its cards without any code change. ministryName sits directly
+  // below devise on the card, matching the reference card's Ministry line.
+  // flagUrl overrides the default 3-stripe Guinea flag graphic (same data:
+  // URL approach as logoUrl) — null keeps the Guinea flag as a sane
+  // default, since every school starts there today.
+  republiqueName String  @default("RÉPUBLIQUE DE GUINÉE")
+  devise         String  @default("Travail - Justice - Solidarité")
+  ministryName   String  @default("Ministère de l'Éducation Nationale et de l'Alphabétisation")
+  flagUrl        String?
 
   updatedAt DateTime @updatedAt
 }

@@ -3,10 +3,13 @@
 //       and the student ID card, edited from Paramètres > "Informations de
 //       l'établissement". Gated to the 'settings' menu.
 // PATCH /api/school-settings — partial update. All fields optional — only
-//       provided ones change. logoUrl is a data: URL, PNG/JPEG only (same
-//       "no Cloudinary yet" pattern as Student.photoUrl) — the PDF export
-//       embeds it directly and can't rasterize SVG. Gated to the 'settings'
-//       menu.
+//       provided ones change. logoUrl/flagUrl are data: URLs, PNG/JPEG only
+//       (same "no Cloudinary yet" pattern as Student.photoUrl) — the PDF
+//       export embeds them directly and can't rasterize SVG. Gated to the
+//       'settings' menu. featuredOnHomepage/homepageLogoUrl are a separate
+//       opt-in for the public homepage's "trusted by" showcase — stored on
+//       School, not SchoolSettings (src/lib/server/school-settings.ts
+//       handles the split).
 //
 // `runtime = 'nodejs'` is required by the runtime-enforcement test
 // (frontend/src/lib/server/observability/runtime-enforcement.test.ts).
@@ -38,6 +41,22 @@ const Body = z.object({
     .optional(),
   republiqueName: z.string().trim().min(1).max(120).optional(),
   devise: z.string().trim().min(1).max(120).optional(),
+  ministryName: z.string().trim().min(1).max(160).optional(),
+  flagUrl: z
+    .string()
+    .trim()
+    .max(700_000)
+    .regex(LOGO_DATA_URL_RE, 'Drapeau invalide — PNG ou JPG uniquement.')
+    .nullable()
+    .optional(),
+  featuredOnHomepage: z.boolean().optional(),
+  homepageLogoUrl: z
+    .string()
+    .trim()
+    .max(700_000)
+    .regex(LOGO_DATA_URL_RE, 'Logo invalide — PNG ou JPG uniquement.')
+    .nullable()
+    .optional(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {

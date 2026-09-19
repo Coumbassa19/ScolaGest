@@ -1,8 +1,10 @@
-// Shared pdfkit helper for drawing a data: URL image (PNG/JPEG only — pdfkit
-// can't rasterize SVG) cropped to fill a box without distorting its aspect
-// ratio, the same way CSS `object-fit: cover` does. Used by the bulletin
-// logo (src/lib/server/bulletin-pdf.ts) and the student ID card's logo and
-// photo (src/lib/server/student-card-pdf.ts), so all three crop identically.
+// Shared pdfkit helpers for drawing a data: URL image (PNG/JPEG only —
+// pdfkit can't rasterize SVG). `drawCoverImage` crops to fill a box without
+// distorting aspect ratio (CSS `object-fit: cover`); `drawContainImage`
+// scales the whole image to fit inside a box, uncropped (CSS `object-fit:
+// contain`). Used by the bulletin logo (src/lib/server/bulletin-pdf.ts) and
+// the student ID card's logo, photo, and watermark
+// (src/lib/server/student-card-pdf.ts), so all crop/fit identically.
 import 'server-only';
 
 const DATA_URL_RE = /^data:image\/(png|jpe?g);base64,(.+)$/i;
@@ -37,6 +39,36 @@ export function drawCoverImage(
     }
     const buffer = Buffer.from(match[2] ?? '', 'base64');
     doc.image(buffer, x, y, { cover: [width, height], align: 'center', valign: 'center' });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    doc.restore();
+  }
+}
+
+// Same decoding as drawCoverImage, but scales the whole image to fit inside
+// the box uncropped (pdfkit's `fit` option), optionally at reduced opacity —
+// used for a plain, undistorted logo placement and for a faint logo
+// watermark. Callers must not already be inside a doc.save()/restore() pair
+// that changes fill/stroke opacity, since this restores full opacity itself.
+export function drawContainImage(
+  doc: PDFKit.PDFDocument,
+  dataUrl: string | null,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  opacity = 1,
+): boolean {
+  if (!dataUrl) return false;
+  const match = DATA_URL_RE.exec(dataUrl);
+  if (!match) return false;
+  doc.save();
+  try {
+    if (opacity < 1) doc.opacity(opacity);
+    const buffer = Buffer.from(match[2] ?? '', 'base64');
+    doc.image(buffer, x, y, { fit: [width, height], align: 'center', valign: 'center' });
     return true;
   } catch {
     return false;
