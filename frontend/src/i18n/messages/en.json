@@ -45,6 +45,7 @@
     "accountingTuition": "Tuition Fees",
     "accountingTeacherPayments": "Teacher Payments",
     "accountingStaffPayments": "Staff Payments",
+    "accountingExpenses": "Expenses",
     "absences": "Absences",
     "messagesGroup": "Messages",
     "messagesNew": "New Message",
@@ -1278,6 +1279,59 @@
       },
       "salaryCell": {
         "invalidAmount": "Invalid amount."
+      }
+    },
+    "expenses": {
+      "list": {
+        "title": "Expenses",
+        "subtitle": "Track the school's running costs",
+        "statThisMonth": "Expenses This Month",
+        "statThisYear": "Expenses This Year",
+        "statCountThisMonth": "Count This Month",
+        "historyTitle": "Expense History",
+        "headerDate": "Date",
+        "headerCategory": "Category",
+        "headerDescription": "Description",
+        "headerAmount": "Amount",
+        "headerMethod": "Method",
+        "headerBeneficiary": "Beneficiary",
+        "noExpenses": "No expenses recorded yet.",
+        "deleteConfirm": "Delete the expense \"{description}\"?"
+      },
+      "edit": {
+        "backLink": "EXPENSES"
+      },
+      "form": {
+        "addButton": "+ Record an Expense",
+        "createTitle": "New Expense",
+        "dateLabel": "Date",
+        "categoryLabel": "Category",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "e.g. Repaired the AC unit in room 3",
+        "amountPlaceholder": "e.g. 500000",
+        "beneficiaryLabel": "Beneficiary (optional)",
+        "beneficiaryPlaceholder": "e.g. Supplier, contractor...",
+        "receiptLabel": "Receipt (optional)",
+        "chooseFile": "Choose a file",
+        "noFileChosen": "No file chosen",
+        "currentReceipt": "Current receipt",
+        "removeReceipt": "Remove",
+        "receiptAlt": "Expense receipt",
+        "receiptHint": "Photo or scan of the receipt — JPG or PNG, 500 KB max.",
+        "errorReceiptTooLarge": "Image too large (500 KB max). Choose a smaller image.",
+        "errorDescriptionRequired": "Description is required.",
+        "savedToast": "Expense recorded successfully."
+      },
+      "categories": {
+        "LOYER": "Rent",
+        "ELECTRICITE_EAU": "Electricity / Water",
+        "FOURNITURES": "School Supplies",
+        "ENTRETIEN": "Maintenance / Repairs",
+        "TRANSPORT": "Transport",
+        "COMMUNICATION": "Communication / Internet",
+        "ALIMENTATION": "Food / Canteen",
+        "TAXES": "Taxes",
+        "AUTRE": "Other"
       }
     }
   },

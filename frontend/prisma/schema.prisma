@@ -68,6 +68,7 @@ model User {
   oauthAccounts     OAuthAccount[]
   adminActions      AdminAction[]
   recordedAbsences  Absence[]
+  recordedExpenses  Expense[]
 
   // Multi-tenancy is opt-in per project: by default no resource is org-scoped.
   // Apps that need it (marketplace, B2B SaaS, classifieds) wire owner relations
@@ -440,6 +441,7 @@ model School {
   grades               Grade[]
   scheduleEntries      ScheduleEntry[]
   revenuePayments      RevenuePayment[]
+  expenses             Expense[]
   settings             SchoolSettings?
   subscriptionPayments SchoolSubscriptionPayment[]
 
@@ -954,6 +956,38 @@ model RevenuePayment {
   @@unique([schoolId, numeroRecu])
   @@index([date])
   @@index([studentId])
+  @@index([categorie])
+  @@index([schoolId])
+}
+
+// Money the school pays OUT for its own running costs (rent, utilities,
+// supplies, maintenance...) — the mirror image of RevenuePayment, which
+// only tracks money coming IN from students. Comptabilité > Dépenses.
+model Expense {
+  id            String   @id @default(cuid())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  date          DateTime @default(now())
+  // LOYER | ELECTRICITE_EAU | FOURNITURES | ENTRETIEN | TRANSPORT |
+  // COMMUNICATION | ALIMENTATION | TAXES | AUTRE
+  categorie     String
+  description   String // e.g. "Réparation climatiseur salle 3"
+  montant       Int // smallest currency unit (GNF has no decimals)
+  moyenPaiement String   @default("ESPECES") // ORANGE_MONEY | ESPECES | VIREMENT
+  // Who the money was actually paid to (supplier, contractor, utility
+  // company...) — free text, optional (not every expense has one, e.g. a
+  // cash advance for a class outing).
+  beneficiaire  String?
+  // Photo/scan of the receipt, as a data URL — same approach as
+  // Student.photoUrl (no external storage configured). Optional: proof is
+  // encouraged, not required, so an expense can still be logged on the spot.
+  receiptUrl    String?
+  // Who recorded this expense — same pattern as Absence.recordedById.
+  recordedById  String?
+  recordedBy    User?    @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+
+  @@index([date])
   @@index([categorie])
   @@index([schoolId])
 }

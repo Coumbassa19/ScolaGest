@@ -45,6 +45,7 @@
     "accountingTuition": "Frais de scolarité",
     "accountingTeacherPayments": "Paiement des enseignants",
     "accountingStaffPayments": "Paiement des personnels",
+    "accountingExpenses": "Dépenses",
     "absences": "Absences",
     "messagesGroup": "Messages",
     "messagesNew": "Nouveau message",
@@ -1264,6 +1265,59 @@
       },
       "salaryCell": {
         "invalidAmount": "Montant invalide."
+      }
+    },
+    "expenses": {
+      "list": {
+        "title": "Dépenses",
+        "subtitle": "Suivi des dépenses de l'établissement",
+        "statThisMonth": "Dépenses ce mois",
+        "statThisYear": "Dépenses cette année",
+        "statCountThisMonth": "Nombre ce mois",
+        "historyTitle": "Historique des dépenses",
+        "headerDate": "Date",
+        "headerCategory": "Catégorie",
+        "headerDescription": "Description",
+        "headerAmount": "Montant",
+        "headerMethod": "Moyen",
+        "headerBeneficiary": "Bénéficiaire",
+        "noExpenses": "Aucune dépense enregistrée pour le moment.",
+        "deleteConfirm": "Supprimer la dépense « {description} » ?"
+      },
+      "edit": {
+        "backLink": "DÉPENSES"
+      },
+      "form": {
+        "addButton": "+ Enregistrer une dépense",
+        "createTitle": "Nouvelle dépense",
+        "dateLabel": "Date",
+        "categoryLabel": "Catégorie",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "ex. Réparation climatiseur salle 3",
+        "amountPlaceholder": "ex. 500000",
+        "beneficiaryLabel": "Bénéficiaire (facultatif)",
+        "beneficiaryPlaceholder": "ex. Fournisseur, prestataire...",
+        "receiptLabel": "Justificatif (facultatif)",
+        "chooseFile": "Choisir un fichier",
+        "noFileChosen": "Aucun fichier choisi",
+        "currentReceipt": "Justificatif actuel",
+        "removeReceipt": "Retirer",
+        "receiptAlt": "Justificatif de la dépense",
+        "receiptHint": "Photo ou scan du reçu — JPG ou PNG, 500 Ko maximum.",
+        "errorReceiptTooLarge": "Image trop lourde (max 500 Ko). Choisis une image plus légère.",
+        "errorDescriptionRequired": "La description est obligatoire.",
+        "savedToast": "Dépense enregistrée avec succès."
+      },
+      "categories": {
+        "LOYER": "Loyer",
+        "ELECTRICITE_EAU": "Électricité / Eau",
+        "FOURNITURES": "Fournitures scolaires",
+        "ENTRETIEN": "Entretien / Réparation",
+        "TRANSPORT": "Transport",
+        "COMMUNICATION": "Communication / Internet",
+        "ALIMENTATION": "Alimentation / Cantine",
+        "TAXES": "Taxes / Impôts",
+        "AUTRE": "Autre"
       }
     }
   },
