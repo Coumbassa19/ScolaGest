@@ -38,10 +38,20 @@ export async function getSchoolSettings(
     prisma.schoolSettings.findUnique({ where: { schoolId } }),
     prisma.school.findUniqueOrThrow({
       where: { id: schoolId },
-      select: { featuredOnHomepage: true, logoUrl: true },
+      select: { name: true, featuredOnHomepage: true, logoUrl: true },
     }),
   ]);
-  const settings = existing ?? (await prisma.schoolSettings.create({ data: { schoolId } }));
+  // First-time creation: seed the real school name (from signup) instead of
+  // the schema's placeholder default, and leave phone/address/email blank
+  // rather than a fake school's contact details — a new school has none of
+  // those yet and shouldn't display someone else's. type/république/devise/
+  // ministry keep their sane Guinea-school defaults (most schools on the
+  // platform want them as-is).
+  const settings =
+    existing ??
+    (await prisma.schoolSettings.create({
+      data: { schoolId, name: school.name, phone: '', address: '', email: '' },
+    }));
   return {
     ...settings,
     featuredOnHomepage: school.featuredOnHomepage,
