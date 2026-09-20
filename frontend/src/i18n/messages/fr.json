@@ -319,9 +319,10 @@
       "messageLabel": "Message (facultatif)",
       "messagePlaceholder": "Dites-nous en plus sur votre école...",
       "submit": "Demander une démo",
+      "submitting": "Envoi en cours…",
+      "success": "Merci ! Votre demande a bien été envoyée, nous vous recontacterons rapidement.",
       "errorRequired": "Merci d'indiquer ton nom et ton numéro WhatsApp.",
-      "whatsappTemplateWithMessage": "Bonjour, je m'appelle {name}. Je souhaite demander une démo de ScolaGest. Mon numéro : {phone}.\nMessage : {message}",
-      "whatsappTemplateNoMessage": "Bonjour, je m'appelle {name}. Je souhaite demander une démo de ScolaGest. Mon numéro : {phone}."
+      "errorNetwork": "Erreur réseau. Réessaie."
     },
     "trustedSchools": {
       "title": "Ils nous font confiance",

@@ -1,29 +1,28 @@
 'use client';
 
 // Public homepage demo-request form (right half of the final CTA section,
-// src/app/page.tsx). No backend endpoint on purpose — submitting opens a
-// pre-filled WhatsApp conversation on the school's existing WhatsApp number
-// (same one already used by the header's WhatsApp button), so a lead never
-// depends on an email landing correctly and the founder already lives in
-// WhatsApp for this kind of contact.
+// src/app/page.tsx). Submits to /api/demo-requests, which emails the lead
+// straight to DEMO_REQUEST_EMAIL — see that route for why a direct send
+// (not WhatsApp, not the outbox/queue system) was chosen here.
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { api, ApiError } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 import Icon from '@/components/global/Icon';
-
-// Same number as the header's WhatsApp button (src/app/page.tsx).
-const WHATSAPP_NUMBER = '224623080950';
 
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-surface text-foreground text-sm placeholder-muted-foreground';
 
 export default function DemoRequestForm() {
   const t = useTranslations('homepage.demoForm');
+  const { toast } = useToast();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
@@ -32,19 +31,25 @@ export default function DemoRequestForm() {
       return;
     }
     setError(null);
-    const trimmedMessage = message.trim();
-    const text = trimmedMessage
-      ? t('whatsappTemplateWithMessage', {
+    setSubmitting(true);
+    try {
+      await api('/api/demo-requests', {
+        method: 'POST',
+        body: {
           name: trimmedName,
           phone: trimmedPhone,
-          message: trimmedMessage,
-        })
-      : t('whatsappTemplateNoMessage', { name: trimmedName, phone: trimmedPhone });
-    window.open(
-      `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`,
-      '_blank',
-      'noopener,noreferrer',
-    );
+          ...(message.trim() ? { message: message.trim() } : {}),
+        },
+      });
+      toast(t('success'), 'success');
+      setName('');
+      setPhone('');
+      setMessage('');
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -92,13 +97,16 @@ export default function DemoRequestForm() {
         </p>
       )}
 
-      <button
-        type="submit"
-        className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground font-headings font-semibold text-lg rounded-lg"
-      >
-        <Icon i="send" size={18} />
-        {t('submit')}
-      </button>
+      <div className="flex justify-center">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground font-headings font-semibold text-lg rounded-lg disabled:opacity-50"
+        >
+          <Icon i="send" size={18} />
+          {submitting ? t('submitting') : t('submit')}
+        </button>
+      </div>
     </form>
   );
 }

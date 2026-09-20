@@ -333,9 +333,10 @@
       "messageLabel": "Message (optional)",
       "messagePlaceholder": "Tell us more about your school...",
       "submit": "Request a demo",
+      "submitting": "Sending…",
+      "success": "Thanks! Your request has been sent, we'll get back to you shortly.",
       "errorRequired": "Please enter your name and WhatsApp number.",
-      "whatsappTemplateWithMessage": "Hello, my name is {name}. I'd like to request a demo of ScolaGest. My number: {phone}.\nMessage: {message}",
-      "whatsappTemplateNoMessage": "Hello, my name is {name}. I'd like to request a demo of ScolaGest. My number: {phone}."
+      "errorNetwork": "Network error. Please try again."
     },
     "trustedSchools": {
       "title": "Trusted by",
