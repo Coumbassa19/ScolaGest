@@ -79,6 +79,10 @@ export default function ReregisterStudentForm({
       setError(t('errorSelectClass'));
       return;
     }
+    if (anneeScolaire === selected.anneeScolaire) {
+      setError(t('errorSameYear', { year: selected.anneeScolaire }));
+      return;
+    }
     setSubmitting(true);
     try {
       await api(`/api/students/${selected.id}`, {
@@ -129,7 +133,9 @@ export default function ReregisterStudentForm({
               {t('resultsLabel')}
             </label>
             <div className="border border-border rounded-md divide-y max-h-48 overflow-y-auto">
-              {searching && <div className="px-3 py-2 text-sm text-muted-foreground">{t('searching')}</div>}
+              {searching && (
+                <div className="px-3 py-2 text-sm text-muted-foreground">{t('searching')}</div>
+              )}
               {!searching && query.trim().length >= 2 && results.length === 0 && (
                 <div className="px-3 py-2 text-sm text-muted-foreground">{t('noResults')}</div>
               )}
@@ -137,7 +143,17 @@ export default function ReregisterStudentForm({
                 <button
                   type="button"
                   key={student.id}
-                  onClick={() => setSelected(student)}
+                  onClick={() => {
+                    setSelected(student);
+                    // A "reregistration" only makes sense for a NEW academic
+                    // year (repeating or moving up a grade next year) — the
+                    // student is already enrolled for their current year, so
+                    // never leave that year pre-selected once picked.
+                    if (anneeScolaire === student.anneeScolaire) {
+                      const nextYear = academicYears.find((y) => y !== student.anneeScolaire);
+                      if (nextYear) setAnneeScolaire(nextYear);
+                    }
+                  }}
                   className={`w-full px-3 py-2 text-left hover:bg-input ${
                     selected?.id === student.id ? 'bg-secondary' : ''
                   }`}
@@ -177,8 +193,9 @@ export default function ReregisterStudentForm({
             >
               {academicYears.length === 0 && <option value={anneeScolaire}>{anneeScolaire}</option>}
               {academicYears.map((year) => (
-                <option key={year} value={year}>
+                <option key={year} value={year} disabled={year === selected?.anneeScolaire}>
                   {year.replace('-', ' - ')}
+                  {year === selected?.anneeScolaire ? ` (${t('currentYearSuffix')})` : ''}
                 </option>
               ))}
             </select>
