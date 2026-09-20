@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import Icon from '@/components/global/Icon';
+import DemoRequestForm from '@/components/DemoRequestForm';
 import { prisma } from '@/lib/server/prisma';
 import { PLANS } from '@/lib/server/billing/constants';
 import { formatPrice } from '@/lib/utils';
@@ -442,21 +443,42 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* CTA FINAL */}
-      <section className="px-4 py-16 md:px-8 md:py-20 bg-primary text-primary-foreground">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl md:text-4xl font-headings font-semibold mb-4">
-            {t('finalCta.title')}
-          </h2>
-          <p className="text-base md:text-lg mb-8" style={{ opacity: 0.9 }}>
-            {t('finalCta.subtitle')}
-          </p>
-          <Link
-            href="/signup"
-            className="inline-block px-8 py-4 bg-primary-foreground text-primary font-headings font-semibold text-lg rounded-lg"
-          >
-            {t('finalCta.cta')}
-          </Link>
+      {/* CTA FINAL + DEMO REQUEST — one section, two halves split by a
+          vertical divider: the existing signup CTA (blue, unchanged) on the
+          left, and a WhatsApp-based demo request form (gold — the same
+          accent already used by the hero's "Essayer gratuitement" button and
+          the logo mark) on the right. Stacks to one column on mobile, where
+          the divider (a side border, meaningless once stacked) disappears. */}
+      <section className="grid grid-cols-1 md:grid-cols-2">
+        <div className="flex items-center justify-center bg-primary px-4 py-16 text-primary-foreground md:border-r md:border-primary-foreground/15 md:px-12 md:py-20">
+          <div className="w-full max-w-md text-center md:text-left">
+            <h2 className="text-2xl md:text-4xl font-headings font-semibold mb-4">
+              {t('finalCta.title')}
+            </h2>
+            <p className="text-base md:text-lg mb-8" style={{ opacity: 0.9 }}>
+              {t('finalCta.subtitle')}
+            </p>
+            <Link
+              href="/signup"
+              className="inline-block px-8 py-4 bg-primary-foreground text-primary font-headings font-semibold text-lg rounded-lg"
+            >
+              {t('finalCta.cta')}
+            </Link>
+          </div>
+        </div>
+        <div className="flex items-center justify-center bg-accent px-4 py-16 md:px-12 md:py-20">
+          <div className="w-full max-w-md text-center md:text-left">
+            <h2 className="text-2xl md:text-4xl font-headings font-semibold text-accent-foreground mb-4">
+              {t('demoForm.title')}
+            </h2>
+            <p
+              className="text-base md:text-lg text-accent-foreground mb-8"
+              style={{ opacity: 0.85 }}
+            >
+              {t('demoForm.subtitle')}
+            </p>
+            <DemoRequestForm />
+          </div>
         </div>
       </section>
 

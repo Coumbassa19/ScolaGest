@@ -323,6 +323,20 @@
       "subtitle": "Create your account in minutes. 14 days free, no credit card.",
       "cta": "Get started for free"
     },
+    "demoForm": {
+      "title": "Request a demo",
+      "subtitle": "Have questions? Our team is here to help you get a clear understanding of ScolaGest before you get started.",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Your name",
+      "phoneLabel": "Your WhatsApp number",
+      "phonePlaceholder": "E.g. 657 89 80 37",
+      "messageLabel": "Message (optional)",
+      "messagePlaceholder": "Tell us more about your school...",
+      "submit": "Request a demo",
+      "errorRequired": "Please enter your name and WhatsApp number.",
+      "whatsappTemplateWithMessage": "Hello, my name is {name}. I'd like to request a demo of ScolaGest. My number: {phone}.\nMessage: {message}",
+      "whatsappTemplateNoMessage": "Hello, my name is {name}. I'd like to request a demo of ScolaGest. My number: {phone}."
+    },
     "trustedSchools": {
       "title": "Trusted by",
       "subtitle": "Guinean schools already use ScolaGest every day."

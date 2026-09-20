@@ -309,6 +309,20 @@
       "subtitle": "Créez votre compte en quelques minutes. 14 jours gratuits, sans carte bancaire.",
       "cta": "Commencer gratuitement"
     },
+    "demoForm": {
+      "title": "Demander une démo",
+      "subtitle": "Vous avez des questions ? Notre équipe vous accompagne pour vous aider à bien comprendre ScolaGest avant de vous lancer.",
+      "nameLabel": "Votre nom",
+      "namePlaceholder": "Votre nom",
+      "phoneLabel": "Votre numéro WhatsApp",
+      "phonePlaceholder": "Ex : 657 89 80 37",
+      "messageLabel": "Message (facultatif)",
+      "messagePlaceholder": "Dites-nous en plus sur votre école...",
+      "submit": "Demander une démo",
+      "errorRequired": "Merci d'indiquer ton nom et ton numéro WhatsApp.",
+      "whatsappTemplateWithMessage": "Bonjour, je m'appelle {name}. Je souhaite demander une démo de ScolaGest. Mon numéro : {phone}.\nMessage : {message}",
+      "whatsappTemplateNoMessage": "Bonjour, je m'appelle {name}. Je souhaite demander une démo de ScolaGest. Mon numéro : {phone}."
+    },
     "trustedSchools": {
       "title": "Ils nous font confiance",
       "subtitle": "Des écoles guinéennes utilisent déjà ScolaGest au quotidien."
