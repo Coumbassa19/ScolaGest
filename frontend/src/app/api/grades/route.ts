@@ -27,7 +27,11 @@ import { requireStaff } from '@/lib/server/middleware/require-staff';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 import { requireSchoolId } from '@/lib/server/tenant/context';
 import { zCuid } from '@/lib/server/zod-helpers';
-import { getTeacherClassIds, getTeacherSubjectIds, assertTeacherAssignment } from '@/lib/server/permissions/teacher-scope';
+import {
+  getTeacherClassIds,
+  getTeacherSubjectIds,
+  assertTeacherAssignment,
+} from '@/lib/server/permissions/teacher-scope';
 
 const Body = z.object({
   classId: zCuid,
@@ -38,7 +42,12 @@ const Body = z.object({
     .array(
       z.object({
         studentId: zCuid,
-        valeur: z.number().int().min(0).max(20),
+        // Decimal grades (e.g. 14.5) are allowed — rounded to 1 decimal
+        // below before storage. Upper bound is enforced imperatively
+        // further down, against the target class's cycle noteMax (10, 20,
+        // ...) — not a fixed literal here, since the max varies per cycle.
+        // 1000 is just a sane absolute ceiling against garbage input.
+        valeur: z.number().min(0).max(1000),
       }),
     )
     .min(1)
@@ -115,15 +124,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
-    const { classId, subjectId, periode, anneeScolaire, entries } = parsed.data;
+    const { classId, subjectId, periode, anneeScolaire } = parsed.data;
+    // Round to 1 decimal at the trust boundary — grades allow a single
+    // decimal digit (14.5, not 14.52) — whatever precision a client sends,
+    // the stored/displayed grade is always clean.
+    const entries = parsed.data.entries.map((e) => ({
+      ...e,
+      valeur: Math.round(e.valeur * 10) / 10,
+    }));
 
     const [schoolClass, subject] = await Promise.all([
-      prisma.schoolClass.findUnique({ where: { id: classId } }),
+      prisma.schoolClass.findUnique({ where: { id: classId }, include: { cycle: true } }),
       prisma.subject.findUnique({ where: { id: subjectId } }),
     ]);
     if (!schoolClass || !subject) {
       return NextResponse.json(
         { error: 'NOT_FOUND', message: 'Classe ou matière introuvable' },
+        { status: 400, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
+
+    const noteMax = schoolClass.cycle.noteMax;
+    const outOfRange = entries.find((e) => e.valeur > noteMax);
+    if (outOfRange) {
+      return NextResponse.json(
+        {
+          error: 'VALIDATION_FAILED',
+          message: `Les notes de cette classe doivent être comprises entre 0 et ${noteMax} (cycle ${schoolClass.cycle.name}).`,
+        },
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
@@ -135,7 +163,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           { status: 403, headers: { 'x-request-id': ctx.requestId } },
         );
       }
-      const allowed = await assertTeacherAssignment(prisma, auth.user.teacherId, classId, subjectId);
+      const allowed = await assertTeacherAssignment(
+        prisma,
+        auth.user.teacherId,
+        classId,
+        subjectId,
+      );
       if (!allowed) {
         return NextResponse.json(
           { error: 'FORBIDDEN', message: 'You are not assigned to this class/subject' },

@@ -46,6 +46,8 @@ function cellToString(cell: unknown): string {
 export function parseGradesSheet(
   rows: unknown[][],
   subjects: GradeImportSubject[],
+  /** Grading scale ("noté sur") of the target class's cycle — see Cycles. */
+  maxNote = 20,
 ): { valid: GradeImportRow[]; errors: GradeImportRowError[] } {
   const errors: GradeImportRowError[] = [];
   const valid: GradeImportRow[] = [];
@@ -102,15 +104,22 @@ export function parseGradesSheet(
     for (const { index, subject } of subjectColumns) {
       const raw = cellToString(row[index]);
       if (!raw) continue; // no grade entered for this subject — fine, skip
-      const valeur = Number(raw);
-      if (!Number.isInteger(valeur) || valeur < 0 || valeur > 20) {
+      // Accepts a comma as the decimal separator too (e.g. "14,5") — common
+      // when a cell was typed by hand rather than read from a real Excel
+      // number, which XLSX already parses correctly regardless of locale.
+      const valeur = Number(raw.replace(',', '.'));
+      if (!Number.isFinite(valeur) || valeur < 0 || valeur > maxNote) {
         errors.push({
           row: sourceRow,
-          message: `Matière "${subject.nom}" : note "${raw}" invalide (attendu un nombre entier de 0 à 20) — ignorée.`,
+          message: `Matière "${subject.nom}" : note "${raw}" invalide (attendu un nombre de 0 à ${maxNote}) — ignorée.`,
         });
         continue;
       }
-      notes.push({ subjectId: subject.id, subjectNom: subject.nom, valeur });
+      notes.push({
+        subjectId: subject.id,
+        subjectNom: subject.nom,
+        valeur: Math.round(valeur * 10) / 10,
+      });
     }
 
     valid.push({

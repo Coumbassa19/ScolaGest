@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
@@ -9,6 +10,8 @@ import { useToast } from '@/contexts/ToastContext';
 export interface ClassOption {
   id: string;
   name: string;
+  /** Grading scale ("noté sur") of this class's cycle — see Cycles. */
+  noteMax: number;
 }
 
 export interface SubjectOption {
@@ -45,6 +48,7 @@ export default function EnterGradesForm({
 }) {
   const t = useTranslations('grades.enterForm');
   const tp = useTranslations('grades.periods');
+  const router = useRouter();
   const { toast } = useToast();
   const PERIODES = PERIODE_VALUES.map((value) => ({ value, label: tp(value) }));
   const [classId, setClassId] = useState(classes[0]?.id ?? '');
@@ -104,6 +108,8 @@ export default function EnterGradesForm({
   }, [classId, subjectId, periode, anneeScolaire]);
 
   const teacherOfSubject = subjects.find((s) => s.id === subjectId);
+  const selectedClass = classes.find((c) => c.id === classId);
+  const noteMax = selectedClass?.noteMax ?? 20;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -122,8 +128,8 @@ export default function EnterGradesForm({
       setError(t('errorAtLeastOneGrade'));
       return;
     }
-    if (entries.some((e) => Number.isNaN(e.valeur) || e.valeur < 0 || e.valeur > 20)) {
-      setError(t('errorGradeRange'));
+    if (entries.some((e) => Number.isNaN(e.valeur) || e.valeur < 0 || e.valeur > noteMax)) {
+      setError(t('errorGradeRange', { max: noteMax }));
       return;
     }
 
@@ -135,6 +141,8 @@ export default function EnterGradesForm({
       });
       setSuccess(true);
       toast(t('success'), 'success');
+      const params = new URLSearchParams({ classId, periode, anneeScolaire });
+      router.push(`/grades?${params.toString()}`);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
     } finally {
@@ -148,7 +156,9 @@ export default function EnterGradesForm({
       <div className="px-4 py-4 md:px-8 border-b border-border bg-surface space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1.5">{t('classLabel')}</label>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">
+              {t('classLabel')}
+            </label>
             <select
               value={classId}
               onChange={(e) => setClassId(e.target.value)}
@@ -162,7 +172,9 @@ export default function EnterGradesForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1.5">{t('subjectLabel')}</label>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">
+              {t('subjectLabel')}
+            </label>
             <select
               value={subjectId}
               onChange={(e) => setSubjectId(e.target.value)}
@@ -176,7 +188,9 @@ export default function EnterGradesForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1.5">{t('periodLabel')}</label>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">
+              {t('periodLabel')}
+            </label>
             <select
               value={periode}
               onChange={(e) => setPeriode(e.target.value)}
@@ -209,6 +223,7 @@ export default function EnterGradesForm({
         </div>
         <div className="text-xs text-muted-foreground bg-secondary rounded-md px-3 py-2">
           {t('hint', {
+            max: noteMax,
             coeff: teacherOfSubject ? t('hintCoeff', { value: teacherOfSubject.coefficient }) : '',
           })}
         </div>
@@ -225,7 +240,7 @@ export default function EnterGradesForm({
                   {t('headerStudent')}
                 </span>
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
-                  {t('headerGrade')}
+                  {t('headerGrade', { max: noteMax })}
                 </span>
               </div>
 
@@ -255,7 +270,8 @@ export default function EnterGradesForm({
                         <input
                           type="number"
                           min={0}
-                          max={20}
+                          max={noteMax}
+                          step={0.1}
                           placeholder="—"
                           value={notes[s.id] ?? ''}
                           onChange={(e) =>

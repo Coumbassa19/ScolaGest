@@ -79,7 +79,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const [schoolClass, subjects, students] = await Promise.all([
-      prisma.schoolClass.findUnique({ where: { id: classId } }),
+      prisma.schoolClass.findUnique({ where: { id: classId }, include: { cycle: true } }),
       prisma.subject.findMany({ select: { id: true, nom: true } }),
       prisma.student.findMany({
         where: { classId },
@@ -116,7 +116,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { valid, errors: parseErrors } = parseGradesSheet(rows, subjects);
+    const { valid, errors: parseErrors } = parseGradesSheet(
+      rows,
+      subjects,
+      schoolClass.cycle.noteMax,
+    );
     if (valid.length === 0) {
       return NextResponse.json(
         {
