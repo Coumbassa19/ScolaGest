@@ -43,6 +43,12 @@ export default function ReregisterStudentForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Shown proactively (not just after a failed submit) whenever the
+  // selected year is still the student's current year — the year select
+  // defaults to it and keeps it grayed out rather than jumping to another
+  // year, so this warning is what actually stops an inattentive click on
+  // "Réinscrire" from going through.
+  const sameYearBlocked = !!selected && anneeScolaire === selected.anneeScolaire;
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -143,17 +149,7 @@ export default function ReregisterStudentForm({
                 <button
                   type="button"
                   key={student.id}
-                  onClick={() => {
-                    setSelected(student);
-                    // A "reregistration" only makes sense for a NEW academic
-                    // year (repeating or moving up a grade next year) — the
-                    // student is already enrolled for their current year, so
-                    // never leave that year pre-selected once picked.
-                    if (anneeScolaire === student.anneeScolaire) {
-                      const nextYear = academicYears.find((y) => y !== student.anneeScolaire);
-                      if (nextYear) setAnneeScolaire(nextYear);
-                    }
-                  }}
+                  onClick={() => setSelected(student)}
                   className={`w-full px-3 py-2 text-left hover:bg-input ${
                     selected?.id === student.id ? 'bg-secondary' : ''
                   }`}
@@ -228,6 +224,15 @@ export default function ReregisterStudentForm({
         </p>
       )}
 
+      {sameYearBlocked && (
+        <p
+          role="alert"
+          className="text-sm text-warning bg-warning/10 border border-warning rounded-md px-3 py-2"
+        >
+          {t('errorSameYear', { year: selected!.anneeScolaire })}
+        </p>
+      )}
+
       {/* Action Buttons */}
       <div className="flex gap-3 justify-end">
         <button
@@ -239,7 +244,7 @@ export default function ReregisterStudentForm({
         </button>
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || sameYearBlocked}
           className="px-6 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-md disabled:opacity-50"
         >
           {submitting ? t('submitting') : t('submit')}
