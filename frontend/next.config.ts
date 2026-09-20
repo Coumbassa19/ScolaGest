@@ -5,11 +5,11 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 // Static security headers applied to every response.
-// Set via next.config.ts (not middleware.ts) so Vercel's edge can serve them
+// Set via next.config.ts (not proxy.ts) so Vercel's edge can serve them
 // from the CDN cache without invoking a function — zero per-request latency.
 //
 // CSP is intentionally NOT included here. App Router pages need a per-request
-// nonce (server-rendered) for inline scripts; ship CSP via middleware.ts when
+// nonce (server-rendered) for inline scripts; ship CSP via proxy.ts when
 // the first frontend page lands. For now, the API-only surface doesn't render
 // HTML and doesn't need CSP.
 const securityHeaders = [

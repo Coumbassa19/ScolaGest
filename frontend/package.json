@@ -19,6 +19,7 @@
     "db:make-superadmin": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/make-superadmin.ts",
     "db:backfill-teacher-assignments": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backfill-teacher-assignments.ts",
     "db:backfill-schools": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backfill-schools.ts",
+    "db:backfill-cycles": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backfill-cycles.ts",
     "seed:dev": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-dev.ts",
     "smoke:auth": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/smoke-auth.ts",
     "postinstall": "prisma generate"
