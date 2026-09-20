@@ -32,19 +32,23 @@ export default function NewRevenueForm({
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const MOYENS: {
-    key: 'WAVE' | 'ORANGE_MONEY' | 'ESPECES';
+    key: 'ORANGE_MONEY' | 'ESPECES';
     label: string;
     sub: string;
     icon: string;
   }[] = [
-    { key: 'WAVE', label: 'Wave', sub: t('methodMobilePayment'), icon: 'smartphone' },
-    { key: 'ORANGE_MONEY', label: 'Orange Money', sub: t('methodMobilePayment'), icon: 'smartphone' },
+    {
+      key: 'ORANGE_MONEY',
+      label: 'Orange Money',
+      sub: t('methodMobilePayment'),
+      icon: 'smartphone',
+    },
     { key: 'ESPECES', label: t('methodCashLabel'), sub: t('methodCash'), icon: 'banknote' },
   ];
   const router = useRouter();
   const { toast } = useToast();
   const [montant, setMontant] = useState('');
-  const [moyenPaiement, setMoyenPaiement] = useState<'WAVE' | 'ORANGE_MONEY' | 'ESPECES'>('WAVE');
+  const [moyenPaiement, setMoyenPaiement] = useState<'ORANGE_MONEY' | 'ESPECES'>('ORANGE_MONEY');
   const [studentId, setStudentId] = useState('');
   const [source, setSource] = useState('Scolarité');
   const [submitting, setSubmitting] = useState(false);
@@ -151,7 +155,9 @@ export default function NewRevenueForm({
         {/* Client associé */}
         <div className="bg-surface rounded-xl border border-border px-4 py-5 md:px-6">
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-semibold text-foreground">{t('associatedStudentLabel')}</label>
+            <label className="text-sm font-semibold text-foreground">
+              {t('associatedStudentLabel')}
+            </label>
             <span className="text-xs text-muted-foreground">{t('optional')}</span>
           </div>
           <select
@@ -236,7 +242,9 @@ export default function NewRevenueForm({
                 <Icon i="plus" size={14} className="text-success" />
                 {t('thisPayment')}
               </span>
-              <span className="text-sm font-semibold text-success">+ {fmt(newAmount, locale)} GNF</span>
+              <span className="text-sm font-semibold text-success">
+                + {fmt(newAmount, locale)} GNF
+              </span>
             </div>
             <div className="flex items-center justify-between pt-1">
               <span className="text-base font-semibold text-foreground">{t('newTotal')}</span>

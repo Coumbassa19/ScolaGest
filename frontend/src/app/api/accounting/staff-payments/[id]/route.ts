@@ -1,10 +1,10 @@
-// PATCH  /api/accounting/teacher-payments/[id] — correct a salary payment
-//        (teacher, pay period, montant, moyen). Still guarded by the
-//        @@unique([teacherId, periode]) constraint, so moving a payment
-//        onto a teacher+month that's already paid is rejected with 409.
-// DELETE /api/accounting/teacher-payments/[id] — void a mistaken salary
-//        payment record. Both require the 'accounting' menu — plain
-//        menu-key gating, no TEACHER-role hardcode (see menu-keys.ts).
+// PATCH  /api/accounting/staff-payments/[id] — correct a salary payment
+//        (staff member, pay period, montant, moyen). Still guarded by the
+//        @@unique([staffId, periode]) constraint, so moving a payment onto
+//        a person+month that's already paid is rejected with 409.
+// DELETE /api/accounting/staff-payments/[id] — void a mistaken salary
+//        payment record. Both require the 'accounting' menu — same gating
+//        as Paiement des enseignants.
 //
 // `runtime = 'nodejs'` is required by the runtime-enforcement test
 // (frontend/src/lib/server/observability/runtime-enforcement.test.ts).
@@ -19,7 +19,7 @@ import { makeRequestContext, withRequestContext } from '@/lib/server/observabili
 import { zCuid } from '@/lib/server/zod-helpers';
 
 const Body = z.object({
-  teacherId: zCuid.optional(),
+  staffId: zCuid.optional(),
   periode: z
     .string()
     .regex(/^\d{4}-\d{2}$/, 'Format attendu : AAAA-MM')
@@ -67,27 +67,27 @@ export async function PATCH(
       }
     }
 
-    if (data.teacherId) {
-      const teacher = await prisma.teacher.findUnique({ where: { id: data.teacherId } });
-      if (!teacher) {
+    if (data.staffId) {
+      const staffMember = await prisma.staff.findUnique({ where: { id: data.staffId } });
+      if (!staffMember) {
         return NextResponse.json(
-          { error: 'TEACHER_NOT_FOUND', message: 'Enseignant introuvable' },
+          { error: 'STAFF_NOT_FOUND', message: 'Membre du personnel introuvable' },
           { status: 404, headers: { 'x-request-id': ctx.requestId } },
         );
       }
     }
 
     try {
-      const payment = await prisma.teacherPayment.update({
+      const payment = await prisma.staffPayment.update({
         where: { id },
         data: {
-          ...(data.teacherId !== undefined ? { teacherId: data.teacherId } : {}),
+          ...(data.staffId !== undefined ? { staffId: data.staffId } : {}),
           ...(data.periode !== undefined ? { periode: data.periode } : {}),
           ...(data.montant !== undefined ? { montant: data.montant } : {}),
           ...(data.moyenPaiement !== undefined ? { moyenPaiement: data.moyenPaiement } : {}),
           ...(datePaiement ? { datePaiement } : {}),
         },
-        include: { teacher: true },
+        include: { staff: true },
       });
       return NextResponse.json({ payment }, { headers: { 'x-request-id': ctx.requestId } });
     } catch (err) {
@@ -102,7 +102,7 @@ export async function PATCH(
         return NextResponse.json(
           {
             error: 'ALREADY_PAID',
-            message: 'Cet enseignant a déjà été payé pour cette période',
+            message: 'Ce membre du personnel a déjà été payé pour cette période',
           },
           { status: 409, headers: { 'x-request-id': ctx.requestId } },
         );
@@ -127,7 +127,7 @@ export async function DELETE(
 
     const { id } = await params;
     try {
-      await prisma.teacherPayment.delete({ where: { id } });
+      await prisma.staffPayment.delete({ where: { id } });
       return new NextResponse(null, { status: 204, headers: { 'x-request-id': ctx.requestId } });
     } catch (err) {
       const isNotFound =

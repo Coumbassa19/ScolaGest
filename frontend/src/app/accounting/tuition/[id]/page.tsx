@@ -91,11 +91,7 @@ export default async function EditTuitionPaymentPage({
               studentId: payment.studentId ?? '',
               periode: (payment.periode ?? 'T1') as 'T1' | 'T2' | 'T3' | 'ANNUEL',
               montant: String(payment.montant),
-              moyenPaiement: payment.moyenPaiement as
-                | 'ESPECES'
-                | 'WAVE'
-                | 'ORANGE_MONEY'
-                | 'VIREMENT',
+              moyenPaiement: payment.moyenPaiement as 'ESPECES' | 'ORANGE_MONEY' | 'VIREMENT',
             }}
           />
         </div>

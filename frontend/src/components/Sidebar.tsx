@@ -67,6 +67,11 @@ const navItems: NavItem[] = [
         labelKey: 'accountingTeacherPayments',
         href: '/accounting/teacher-payments',
       },
+      {
+        key: 'accounting-staff-payments',
+        labelKey: 'accountingStaffPayments',
+        href: '/accounting/staff-payments',
+      },
     ],
   },
   { key: 'absences', icon: 'user-x', labelKey: 'absences', href: '/absences' },

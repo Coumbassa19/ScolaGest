@@ -1,10 +1,9 @@
-// POST /api/accounting/teacher-payments — record a salary payment to a
-//      teacher for one pay period ("YYYY-MM"). The @@unique([teacherId,
-//      periode]) constraint on TeacherPayment makes double-paying the same
-//      teacher for the same month impossible at the DB level — surfaced
-//      here as a clear 409 instead of a raw 500. Gated to the 'accounting'
-//      menu (plain menu-key check, no TEACHER-role hardcode — see
-//      menu-keys.ts for the admin's bonus-menu-for-teachers feature).
+// POST /api/accounting/staff-payments — record a salary payment to a
+//      non-teaching staff member for one pay period ("YYYY-MM"). The
+//      @@unique([staffId, periode]) constraint on StaffPayment makes
+//      double-paying the same person for the same month impossible at the
+//      DB level — surfaced here as a clear 409 instead of a raw 500. Gated
+//      to the 'accounting' menu, same as Paiement des enseignants.
 //
 // `runtime = 'nodejs'` is required by the runtime-enforcement test
 // (frontend/src/lib/server/observability/runtime-enforcement.test.ts).
@@ -20,7 +19,7 @@ import { requireSchoolId } from '@/lib/server/tenant/context';
 import { zCuid } from '@/lib/server/zod-helpers';
 
 const Body = z.object({
-  teacherId: zCuid,
+  staffId: zCuid,
   periode: z.string().regex(/^\d{4}-\d{2}$/, 'Format attendu : AAAA-MM'),
   montant: z.number().int().positive(),
   moyenPaiement: z.enum(['ORANGE_MONEY', 'ESPECES', 'VIREMENT']).default('ESPECES'),
@@ -57,25 +56,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const teacher = await prisma.teacher.findUnique({ where: { id: data.teacherId } });
-    if (!teacher) {
+    const staffMember = await prisma.staff.findUnique({ where: { id: data.staffId } });
+    if (!staffMember) {
       return NextResponse.json(
-        { error: 'TEACHER_NOT_FOUND', message: 'Enseignant introuvable' },
+        { error: 'STAFF_NOT_FOUND', message: 'Membre du personnel introuvable' },
         { status: 404, headers: { 'x-request-id': ctx.requestId } },
       );
     }
 
     try {
-      const payment = await prisma.teacherPayment.create({
+      const payment = await prisma.staffPayment.create({
         data: {
           schoolId: requireSchoolId(auth.user.schoolId),
-          teacherId: data.teacherId,
+          staffId: data.staffId,
           periode: data.periode,
           montant: data.montant,
           moyenPaiement: data.moyenPaiement,
           datePaiement,
         },
-        include: { teacher: true },
+        include: { staff: true },
       });
       return NextResponse.json(
         { payment },
@@ -88,7 +87,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json(
           {
             error: 'ALREADY_PAID',
-            message: 'Cet enseignant a déjà été payé pour cette période',
+            message: 'Ce membre du personnel a déjà été payé pour cette période',
           },
           { status: 409, headers: { 'x-request-id': ctx.requestId } },
         );

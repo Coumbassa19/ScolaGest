@@ -44,6 +44,7 @@
     "accountingRegistration": "Inscription & Réinscription",
     "accountingTuition": "Frais de scolarité",
     "accountingTeacherPayments": "Paiement des enseignants",
+    "accountingStaffPayments": "Paiement des personnels",
     "absences": "Absences",
     "messagesGroup": "Messages",
     "messagesNew": "Nouveau message",
@@ -1197,6 +1198,66 @@
         "placeholder": "— saisir",
         "invalidAmount": "Montant invalide.",
         "ok": "OK"
+      }
+    },
+    "staffPayments": {
+      "list": {
+        "title": "Paiement des personnels",
+        "subtitle": "Suivi des salaires — {month}",
+        "statMonthlyPayroll": "Masse salariale mensuelle",
+        "statPaidThisMonth": "Payé ce mois",
+        "statStaffPaid": "Personnels payés ce mois",
+        "statStaffPending": "En attente ce mois",
+        "statusSectionTitle": "Statut du mois en cours — {month}",
+        "statusSectionHint": "Le personnel (direction, comptabilité, surveillance, etc.) a un salaire mensuel fixe, contrairement aux enseignants. Clique sur le montant pour le corriger.",
+        "headerStaff": "Personnel",
+        "headerPoste": "Poste",
+        "headerSalary": "Salaire mensuel",
+        "headerPaidThisYear": "Payé cette année",
+        "headerStatusThisMonth": "Statut ce mois",
+        "noStaff": "Aucun personnel enregistré pour le moment.",
+        "paid": "Payé",
+        "unpaid": "Non payé",
+        "historyTitle": "Historique des paiements",
+        "headerMonthPaid": "Mois payé",
+        "headerAmount": "Montant",
+        "headerMethod": "Moyen",
+        "noPayments": "Aucun paiement enregistré pour le moment.",
+        "deleteConfirm": "Supprimer ce paiement à {name} ?"
+      },
+      "edit": {
+        "backLink": "PAIEMENT DES PERSONNELS"
+      },
+      "addForm": {
+        "addButton": "+ Ajouter un personnel",
+        "title": "Ajouter un personnel",
+        "nomLabel": "Nom",
+        "prenomLabel": "Prénom",
+        "posteLabel": "Poste",
+        "postePlaceholder": "ex. Directeur, Comptable, Surveillant",
+        "telephoneLabel": "Téléphone",
+        "emailLabel": "Email",
+        "salaryLabel": "Salaire mensuel (GNF)",
+        "salaryPlaceholder": "ex. 1500000",
+        "submit": "Ajouter",
+        "savedToast": "Personnel ajouté avec succès.",
+        "errorRequired": "Le nom, le prénom et le poste sont obligatoires.",
+        "errorInvalidSalary": "Salaire invalide."
+      },
+      "form": {
+        "createTitle": "Paiement de personnel",
+        "staffLabel": "Membre du personnel :",
+        "selectStaffPlaceholder": "— Sélectionner un membre du personnel —",
+        "autoFilled": "Montant pré-rempli avec le salaire mensuel fixe — modifiable si besoin.",
+        "monthLabel": "Mois payé :",
+        "amountPlaceholder": "ex. 1500000",
+        "invalidMonthError": "Sélectionnez un mois valide.",
+        "selectStaffError": "Sélectionnez un membre du personnel.",
+        "errorAlreadyPaid": "Ce membre du personnel a déjà été payé pour cette période.",
+        "errorStaffNotFound": "Membre du personnel introuvable. Il a peut-être été supprimé — actualisez la page."
+      },
+      "salaryCell": {
+        "invalidAmount": "Montant invalide."
       }
     }
   },

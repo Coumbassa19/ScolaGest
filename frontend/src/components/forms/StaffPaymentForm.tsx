@@ -1,13 +1,13 @@
 'use client';
 
 // "+ Enregistrer un paiement" panel on Comptabilité > Paiement des
-// enseignants. Posts to /api/accounting/teacher-payments. Teachers here are
-// paid by the hour according to their emploi du temps, so selecting one
-// auto-calculates the montant as heures/semaine × 4 semaines × taux
-// horaire — a starting estimate, not a lock: the field stays editable for
-// part-time weeks, absences, or any manual correction. The backend rejects
-// a second payment for the same teacher+month outright (see the
-// @@unique constraint on TeacherPayment).
+// personnels. Posts to /api/accounting/staff-payments. Staff here are paid a
+// flat, fixed monthly salary (unlike teachers, who are paid by the hour), so
+// selecting one auto-fills the montant with their salaireMensuel directly —
+// no hours/rate calculation. The field stays editable for prorated months,
+// bonuses, or any manual correction. The backend rejects a second payment
+// for the same person+month outright (see the @@unique constraint on
+// StaffPayment).
 
 import { useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -15,22 +15,20 @@ import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 
-export interface PayableTeacher {
+export interface PayableStaff {
   id: string;
   nom: string;
   prenom: string;
-  tauxHoraire: number | null;
-  weeklyHours: number;
+  poste: string;
+  salaireMensuel: number;
 }
 
-export interface TeacherPaymentInitialData {
-  teacherId: string;
+export interface StaffPaymentInitialData {
+  staffId: string;
   periode: string;
   montant: string;
   moyenPaiement: 'ESPECES' | 'ORANGE_MONEY' | 'VIREMENT';
 }
-
-const WEEKS_PER_MONTH = 4;
 
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm';
@@ -38,13 +36,12 @@ const fieldClass =
 const MOYEN_VALUES = ['ESPECES', 'ORANGE_MONEY', 'VIREMENT'] as const;
 
 // Maps the stable `error` codes the backend returns (see
-// /api/accounting/teacher-payments{,/[id]}) to the matching translation key
-// in `accounting.teacherPayments.form` / `accounting.common`, so a server
-// error always reads in the app's current language instead of leaking a
-// raw code like "ALREADY_PAID" — same pattern as login/page.tsx.
+// /api/accounting/staff-payments{,/[id]}) to the matching translation key in
+// `accounting.staffPayments.form` / `accounting.common` — same pattern as
+// TeacherPaymentForm.
 const FORM_ERROR_KEYS: Record<string, string> = {
   ALREADY_PAID: 'errorAlreadyPaid',
-  TEACHER_NOT_FOUND: 'errorTeacherNotFound',
+  STAFF_NOT_FOUND: 'errorStaffNotFound',
 };
 const COMMON_ERROR_KEYS: Record<string, string> = {
   PAYMENT_NOT_FOUND: 'errorPaymentNotFound',
@@ -55,29 +52,24 @@ function currentMonthValue(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function estimateMontant(teacher: PayableTeacher | null): string {
-  if (!teacher?.tauxHoraire || !teacher.weeklyHours) return '';
-  return String(Math.round(teacher.weeklyHours * WEEKS_PER_MONTH * teacher.tauxHoraire));
-}
-
-export default function TeacherPaymentForm({
-  teachers,
+export default function StaffPaymentForm({
+  staff,
   paymentId,
   initialData,
 }: {
-  teachers: PayableTeacher[];
+  staff: PayableStaff[];
   /** When provided, the form edits this payment (PATCH) instead of creating one (POST). */
   paymentId?: string;
-  initialData?: TeacherPaymentInitialData;
+  initialData?: StaffPaymentInitialData;
 }) {
-  const t = useTranslations('accounting.teacherPayments.form');
+  const t = useTranslations('accounting.staffPayments.form');
   const tc = useTranslations('accounting.common');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const { toast } = useToast();
   const isEdit = Boolean(paymentId);
   const [open, setOpen] = useState(isEdit);
-  const [teacherId, setTeacherId] = useState(initialData?.teacherId ?? '');
+  const [staffId, setStaffId] = useState(initialData?.staffId ?? '');
   const [periode, setPeriode] = useState(initialData?.periode ?? currentMonthValue());
   const [montant, setMontant] = useState(initialData?.montant ?? '');
   const [montantAuto, setMontantAuto] = useState(!isEdit);
@@ -88,21 +80,21 @@ export default function TeacherPaymentForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedTeacher = useMemo(
-    () => teachers.find((t) => t.id === teacherId) ?? null,
-    [teachers, teacherId],
+  const selectedStaff = useMemo(
+    () => staff.find((s) => s.id === staffId) ?? null,
+    [staff, staffId],
   );
 
-  function onTeacherChange(id: string) {
-    setTeacherId(id);
+  function onStaffChange(id: string) {
+    setStaffId(id);
     if (montantAuto) {
-      const t = teachers.find((te) => te.id === id) ?? null;
-      setMontant(estimateMontant(t));
+      const s = staff.find((st) => st.id === id) ?? null;
+      setMontant(s ? String(s.salaireMensuel) : '');
     }
   }
 
   function resetForm() {
-    setTeacherId('');
+    setStaffId('');
     setPeriode(currentMonthValue());
     setMontant('');
     setMontantAuto(true);
@@ -114,8 +106,8 @@ export default function TeacherPaymentForm({
     e.preventDefault();
     setError(null);
 
-    if (!teacherId) {
-      setError(t('selectTeacherError'));
+    if (!staffId) {
+      setError(t('selectStaffError'));
       return;
     }
     const amount = Number(montant);
@@ -130,13 +122,13 @@ export default function TeacherPaymentForm({
 
     setSubmitting(true);
     try {
-      const body = { teacherId, periode, montant: amount, moyenPaiement };
+      const body = { staffId, periode, montant: amount, moyenPaiement };
       if (isEdit) {
-        await api(`/api/accounting/teacher-payments/${paymentId}`, { method: 'PATCH', body });
+        await api(`/api/accounting/staff-payments/${paymentId}`, { method: 'PATCH', body });
         toast(tc('paymentUpdatedToast'), 'success');
-        router.push('/accounting/teacher-payments');
+        router.push('/accounting/staff-payments');
       } else {
-        await api('/api/accounting/teacher-payments', { method: 'POST', body });
+        await api('/api/accounting/staff-payments', { method: 'POST', body });
         toast(tc('paymentSavedToast'), 'success');
         resetForm();
         setOpen(false);
@@ -190,35 +182,23 @@ export default function TeacherPaymentForm({
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-semibold text-foreground mb-2">
-            {t('teacherLabel')}
+            {t('staffLabel')}
           </label>
           <select
-            value={teacherId}
-            onChange={(e) => onTeacherChange(e.target.value)}
+            value={staffId}
+            onChange={(e) => onStaffChange(e.target.value)}
             required
             className={fieldClass}
           >
-            <option value="">{t('selectTeacherPlaceholder')}</option>
-            {teachers.map((teacher) => (
-              <option key={teacher.id} value={teacher.id}>
-                {teacher.nom} {teacher.prenom}
-                {teacher.tauxHoraire
-                  ? ` — ${teacher.tauxHoraire.toLocaleString('fr-FR')} GNF/h`
-                  : ''}
+            <option value="">{t('selectStaffPlaceholder')}</option>
+            {staff.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nom} {s.prenom} — {s.poste} ({s.salaireMensuel.toLocaleString('fr-FR')} GNF)
               </option>
             ))}
           </select>
-          {selectedTeacher && !selectedTeacher.tauxHoraire && (
-            <p className="text-xs text-muted-foreground mt-1">{t('noHourlyRateHint')}</p>
-          )}
-          {selectedTeacher?.tauxHoraire && montantAuto && (
-            <p className="text-xs text-success mt-1">
-              {t('autoCalculated', {
-                hours: selectedTeacher.weeklyHours,
-                weeks: WEEKS_PER_MONTH,
-                rate: selectedTeacher.tauxHoraire.toLocaleString('fr-FR'),
-              })}
-            </p>
+          {selectedStaff && montantAuto && (
+            <p className="text-xs text-success mt-1">{t('autoFilled')}</p>
           )}
         </div>
 
@@ -283,7 +263,7 @@ export default function TeacherPaymentForm({
             type="button"
             onClick={() => {
               if (isEdit) {
-                router.push('/accounting/teacher-payments');
+                router.push('/accounting/staff-payments');
               } else {
                 resetForm();
                 setOpen(false);
@@ -295,7 +275,7 @@ export default function TeacherPaymentForm({
           </button>
           <button
             type="submit"
-            disabled={submitting || teachers.length === 0}
+            disabled={submitting || staff.length === 0}
             className="px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md disabled:opacity-50"
           >
             {submitting ? tCommon('saving') : isEdit ? tc('saveChanges') : tc('savePayment')}

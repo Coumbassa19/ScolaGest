@@ -55,6 +55,8 @@ const TENANT_SCOPED_MODELS = new Set([
   'BulletinRemark',
   'Teacher',
   'TeacherPayment',
+  'Staff',
+  'StaffPayment',
   'TuitionPlan',
   'Subject',
   'TeacherAssignment',

@@ -33,13 +33,13 @@ export interface RegistrationPaymentInitialData {
   studentId: string;
   statut: 'NOUVEAU' | 'ANCIEN';
   montant: string;
-  moyenPaiement: 'ESPECES' | 'WAVE' | 'ORANGE_MONEY' | 'VIREMENT';
+  moyenPaiement: 'ESPECES' | 'ORANGE_MONEY' | 'VIREMENT';
 }
 
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm';
 
-const MOYEN_VALUES = ['ESPECES', 'WAVE', 'ORANGE_MONEY', 'VIREMENT'] as const;
+const MOYEN_VALUES = ['ESPECES', 'ORANGE_MONEY', 'VIREMENT'] as const;
 
 export default function RegistrationPaymentForm({
   students,
@@ -182,7 +182,8 @@ export default function RegistrationPaymentForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-foreground mb-2">
-              {t('statusLabel')} <span className="font-normal text-muted-foreground">{t('statusHint')}</span>
+              {t('statusLabel')}{' '}
+              <span className="font-normal text-muted-foreground">{t('statusHint')}</span>
             </label>
             <select
               value={statut}
@@ -256,11 +257,7 @@ export default function RegistrationPaymentForm({
             disabled={submitting || students.length === 0}
             className="px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md disabled:opacity-50"
           >
-            {submitting
-              ? tCommon('saving')
-              : isEdit
-                ? tc('saveChanges')
-                : tc('savePayment')}
+            {submitting ? tCommon('saving') : isEdit ? tc('saveChanges') : tc('savePayment')}
           </button>
         </div>
       </form>

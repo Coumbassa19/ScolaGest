@@ -21,7 +21,7 @@ const Body = z.object({
   studentId: zCuid.optional(),
   periode: z.enum(['T1', 'T2', 'T3', 'ANNUEL']).optional(),
   montant: z.number().int().positive().optional(),
-  moyenPaiement: z.enum(['WAVE', 'ORANGE_MONEY', 'ESPECES', 'VIREMENT']).optional(),
+  moyenPaiement: z.enum(['ORANGE_MONEY', 'ESPECES', 'VIREMENT']).optional(),
   date: z.string().trim().optional(),
 });
 

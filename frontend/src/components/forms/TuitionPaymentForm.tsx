@@ -39,14 +39,14 @@ export interface TuitionPaymentInitialData {
   studentId: string;
   periode: 'T1' | 'T2' | 'T3' | 'ANNUEL';
   montant: string;
-  moyenPaiement: 'ESPECES' | 'WAVE' | 'ORANGE_MONEY' | 'VIREMENT';
+  moyenPaiement: 'ESPECES' | 'ORANGE_MONEY' | 'VIREMENT';
 }
 
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm';
 
 const PERIODE_VALUES = ['T1', 'T2', 'T3', 'ANNUEL'] as const;
-const MOYEN_VALUES = ['ESPECES', 'WAVE', 'ORANGE_MONEY', 'VIREMENT'] as const;
+const MOYEN_VALUES = ['ESPECES', 'ORANGE_MONEY', 'VIREMENT'] as const;
 
 export default function TuitionPaymentForm({
   students,
@@ -299,11 +299,7 @@ export default function TuitionPaymentForm({
             disabled={submitting || students.length === 0}
             className="px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md disabled:opacity-50"
           >
-            {submitting
-              ? tCommon('saving')
-              : isEdit
-                ? tc('saveChanges')
-                : tc('savePayment')}
+            {submitting ? tCommon('saving') : isEdit ? tc('saveChanges') : tc('savePayment')}
           </button>
         </div>
       </form>

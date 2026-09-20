@@ -87,11 +87,7 @@ export default async function EditTeacherPaymentPage({
               teacherId: payment.teacherId,
               periode: payment.periode,
               montant: String(payment.montant),
-              moyenPaiement: payment.moyenPaiement as
-                | 'ESPECES'
-                | 'WAVE'
-                | 'ORANGE_MONEY'
-                | 'VIREMENT',
+              moyenPaiement: payment.moyenPaiement as 'ESPECES' | 'ORANGE_MONEY' | 'VIREMENT',
             }}
           />
         </div>

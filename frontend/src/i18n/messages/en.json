@@ -44,6 +44,7 @@
     "accountingRegistration": "Enrolment & Re-enrolment",
     "accountingTuition": "Tuition Fees",
     "accountingTeacherPayments": "Teacher Payments",
+    "accountingStaffPayments": "Staff Payments",
     "absences": "Absences",
     "messagesGroup": "Messages",
     "messagesNew": "New Message",
@@ -1211,6 +1212,66 @@
         "placeholder": "— enter",
         "invalidAmount": "Invalid amount.",
         "ok": "OK"
+      }
+    },
+    "staffPayments": {
+      "list": {
+        "title": "Staff Payments",
+        "subtitle": "Track salaries — {month}",
+        "statMonthlyPayroll": "Monthly Payroll",
+        "statPaidThisMonth": "Paid This Month",
+        "statStaffPaid": "Staff Paid This Month",
+        "statStaffPending": "Pending This Month",
+        "statusSectionTitle": "Current Month Status — {month}",
+        "statusSectionHint": "Staff (direction, accounting, supervision, etc.) have a fixed monthly salary, unlike teachers. Click the amount to correct it.",
+        "headerStaff": "Staff",
+        "headerPoste": "Role",
+        "headerSalary": "Monthly Salary",
+        "headerPaidThisYear": "Paid This Year",
+        "headerStatusThisMonth": "Status This Month",
+        "noStaff": "No staff registered yet.",
+        "paid": "Paid",
+        "unpaid": "Unpaid",
+        "historyTitle": "Payment History",
+        "headerMonthPaid": "Month Paid",
+        "headerAmount": "Amount",
+        "headerMethod": "Method",
+        "noPayments": "No payments recorded yet.",
+        "deleteConfirm": "Delete this payment to {name}?"
+      },
+      "edit": {
+        "backLink": "STAFF PAYMENTS"
+      },
+      "addForm": {
+        "addButton": "+ Add Staff Member",
+        "title": "Add a Staff Member",
+        "nomLabel": "Last Name",
+        "prenomLabel": "First Name",
+        "posteLabel": "Role",
+        "postePlaceholder": "e.g. Director, Accountant, Supervisor",
+        "telephoneLabel": "Phone",
+        "emailLabel": "Email",
+        "salaryLabel": "Monthly Salary (GNF)",
+        "salaryPlaceholder": "e.g. 1500000",
+        "submit": "Add",
+        "savedToast": "Staff member added successfully.",
+        "errorRequired": "Last name, first name and role are required.",
+        "errorInvalidSalary": "Invalid salary."
+      },
+      "form": {
+        "createTitle": "Staff Payment",
+        "staffLabel": "Staff member:",
+        "selectStaffPlaceholder": "— Select a staff member —",
+        "autoFilled": "Amount pre-filled with the fixed monthly salary — editable if needed.",
+        "monthLabel": "Month Paid:",
+        "amountPlaceholder": "e.g. 1500000",
+        "invalidMonthError": "Select a valid month.",
+        "selectStaffError": "Select a staff member.",
+        "errorAlreadyPaid": "This staff member has already been paid for this period.",
+        "errorStaffNotFound": "Staff member not found. They may have been removed — please refresh the page."
+      },
+      "salaryCell": {
+        "invalidAmount": "Invalid amount."
       }
     }
   },

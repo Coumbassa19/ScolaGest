@@ -22,7 +22,7 @@ import { zCuid } from '@/lib/server/zod-helpers';
 const Body = z.object({
   montant: z.number().int().positive(),
   source: z.string().trim().min(1).max(150),
-  moyenPaiement: z.enum(['WAVE', 'ORANGE_MONEY', 'ESPECES']).default('ESPECES'),
+  moyenPaiement: z.enum(['ORANGE_MONEY', 'ESPECES']).default('ESPECES'),
   studentId: zCuid.optional().or(z.literal('')),
   date: z.string().trim().optional(),
 });

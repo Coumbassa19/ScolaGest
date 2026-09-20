@@ -427,6 +427,8 @@ model School {
   bulletinRemarks      BulletinRemark[]
   teachers             Teacher[]
   teacherPayments      TeacherPayment[]
+  staff                Staff[]
+  staffPayments        StaffPayment[]
   tuitionPlans         TuitionPlan[]
   subjects             Subject[]
   teacherAssignments   TeacherAssignment[]
@@ -741,11 +743,52 @@ model TeacherPayment {
   periode       String // "YYYY-MM", e.g. "2026-09"
   montant       Int // smallest currency unit (GNF has no decimals)
   datePaiement  DateTime @default(now())
-  moyenPaiement String   @default("ESPECES") // WAVE | ORANGE_MONEY | ESPECES | VIREMENT
+  moyenPaiement String   @default("ESPECES") // ORANGE_MONEY | ESPECES | VIREMENT
   createdAt     DateTime @default(now())
 
   @@unique([teacherId, periode])
   @@index([teacherId])
+  @@index([periode])
+  @@index([schoolId])
+}
+
+// A non-teaching staff member (direction, comptabilité, surveillance, etc.)
+// — distinct from Teacher, who is paid by the hour according to their
+// emploi du temps. Staff are paid a flat, fixed monthly salary instead.
+model Staff {
+  id             String   @id @default(cuid())
+  schoolId       String
+  school         School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  nom            String
+  prenom         String
+  poste          String // e.g. "Directeur", "Comptable", "Surveillant"
+  telephone      String?
+  email          String?
+  salaireMensuel Int // smallest currency unit (GNF has no decimals) — fixed monthly salary
+  createdAt      DateTime @default(now())
+
+  payments StaffPayment[]
+
+  @@index([schoolId])
+}
+
+// One row per (staff member, pay period) — mirrors TeacherPayment, but the
+// montant is expected to equal Staff.salaireMensuel every month (a fixed
+// salary) rather than being derived from hours worked.
+model StaffPayment {
+  id            String   @id @default(cuid())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staffId       String
+  staff         Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  periode       String // "YYYY-MM", e.g. "2026-09"
+  montant       Int // smallest currency unit (GNF has no decimals)
+  datePaiement  DateTime @default(now())
+  moyenPaiement String   @default("ESPECES") // ORANGE_MONEY | ESPECES | VIREMENT
+  createdAt     DateTime @default(now())
+
+  @@unique([staffId, periode])
+  @@index([staffId])
   @@index([periode])
   @@index([schoolId])
 }

@@ -30,7 +30,7 @@ const Body = z.object({
   studentId: zCuid,
   statut: z.enum(['NOUVEAU', 'ANCIEN']),
   montant: z.number().int().positive(),
-  moyenPaiement: z.enum(['WAVE', 'ORANGE_MONEY', 'ESPECES', 'VIREMENT']).default('ESPECES'),
+  moyenPaiement: z.enum(['ORANGE_MONEY', 'ESPECES', 'VIREMENT']).default('ESPECES'),
   anneeScolaire: z.string().trim().min(1).max(20).optional(),
   date: z.string().trim().optional(),
 });
