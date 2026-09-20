@@ -109,11 +109,11 @@ export async function sendSubscriptionReminders(
     if (milestone === undefined) continue; // nothing due for this school today
 
     const recipients = await opts.prisma.user.findMany({
-      where: { schoolId: school.id, role: 'DIRECTION', status: 'ACTIVE' },
+      where: { schoolId: school.id, role: { in: ['ADMIN', 'SUPERADMIN'] }, status: 'ACTIVE' },
       select: { email: true },
     });
     if (recipients.length === 0) {
-      log.warn('subscription-reminders: no DIRECTION recipient, skipping', { schoolId: school.id });
+      log.warn('subscription-reminders: no admin recipient, skipping', { schoolId: school.id });
       skipped++;
       continue;
     }

@@ -169,7 +169,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           email,
           passwordHash,
           name,
-          role: 'DIRECTION',
+          role: 'ADMIN',
           enabledMenus: [...MENU_KEYS],
           schoolId: school.id,
           emailVerifiedAt: now,
