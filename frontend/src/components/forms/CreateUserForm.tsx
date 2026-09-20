@@ -4,7 +4,13 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
-import { MENU_KEYS, TEACHER_CORE_MENUS, DIRECTION_CORE_MENUS, type MenuKey } from '@/lib/server/permissions/menu-keys';
+import {
+  MENU_KEYS,
+  TEACHER_CORE_MENUS,
+  DIRECTION_CORE_MENUS,
+  STAFF_CORE_MENUS,
+  type MenuKey,
+} from '@/lib/server/permissions/menu-keys';
 
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm placeholder-muted-foreground';
@@ -15,7 +21,14 @@ export interface UnlinkedTeacherOption {
   prenom: string;
 }
 
-type StaffRole = 'DIRECTION' | 'TEACHER' | 'ADMIN' | 'SUPERADMIN';
+export interface UnlinkedStaffOption {
+  id: string;
+  nom: string;
+  prenom: string;
+  poste: string;
+}
+
+type StaffRole = 'DIRECTION' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'SUPERADMIN';
 
 interface CreateUserResponse {
   user: { id: string; email: string };
@@ -42,15 +55,18 @@ const MENU_LABEL_KEY: Record<MenuKey, string> = {
 function coreMenusFor(role: StaffRole): readonly MenuKey[] {
   if (role === 'TEACHER') return TEACHER_CORE_MENUS;
   if (role === 'DIRECTION') return DIRECTION_CORE_MENUS;
+  if (role === 'STAFF') return STAFF_CORE_MENUS;
   return []; // ADMIN/SUPERADMIN are unrestricted — no menu picker shown for them
 }
 
 export default function CreateUserForm({
   canCreateAdmins,
   unlinkedTeachers,
+  unlinkedStaff,
 }: {
   canCreateAdmins: boolean;
   unlinkedTeachers: UnlinkedTeacherOption[];
+  unlinkedStaff: UnlinkedStaffOption[];
 }) {
   const t = useTranslations('settings.users.new');
   const tSidebar = useTranslations('sidebar');
@@ -60,6 +76,7 @@ export default function CreateUserForm({
   const [name, setName] = useState('');
   const [role, setRole] = useState<StaffRole>('TEACHER');
   const [teacherId, setTeacherId] = useState('');
+  const [staffId, setStaffId] = useState('');
   const [enabledMenus, setEnabledMenus] = useState<Set<MenuKey>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +103,10 @@ export default function CreateUserForm({
       setError(t('errorTeacherRequired'));
       return;
     }
+    if (role === 'STAFF' && !staffId) {
+      setError(t('errorStaffRequired'));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -94,6 +115,7 @@ export default function CreateUserForm({
         ...(name.trim() ? { name: name.trim() } : {}),
         role,
         ...(role === 'TEACHER' ? { teacherId } : {}),
+        ...(role === 'STAFF' ? { staffId } : {}),
         ...(enabledMenus.size > 0 ? { enabledMenus: Array.from(enabledMenus) } : {}),
       };
       const res = await api<CreateUserResponse>('/api/admin/users', { method: 'POST', body });
@@ -196,12 +218,14 @@ export default function CreateUserForm({
               const next = e.target.value as StaffRole;
               setRole(next);
               if (next !== 'TEACHER') setTeacherId('');
+              if (next !== 'STAFF') setStaffId('');
               setEnabledMenus(new Set());
             }}
             className={fieldClass}
           >
             <option value="TEACHER">{tUsers('roleTeacher')}</option>
             <option value="DIRECTION">{tUsers('roleDirection')}</option>
+            <option value="STAFF">{tUsers('roleStaff')}</option>
             {canCreateAdmins && <option value="ADMIN">{tUsers('roleAdmin')}</option>}
             {canCreateAdmins && <option value="SUPERADMIN">{tUsers('roleSuperadmin')}</option>}
           </select>
@@ -235,7 +259,35 @@ export default function CreateUserForm({
           </div>
         )}
 
-        {(role === 'TEACHER' || role === 'DIRECTION') && (
+        {role === 'STAFF' && (
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              {t('staffLabel')}
+            </label>
+            {unlinkedStaff.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('noStaffAvailable')}</p>
+            ) : (
+              <>
+                <select
+                  value={staffId}
+                  onChange={(e) => setStaffId(e.target.value)}
+                  required
+                  className={fieldClass}
+                >
+                  <option value="">{t('staffPlaceholder')}</option>
+                  {unlinkedStaff.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nom} {s.prenom} — {s.poste}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1.5">{t('staffHint')}</p>
+              </>
+            )}
+          </div>
+        )}
+
+        {(role === 'TEACHER' || role === 'DIRECTION' || role === 'STAFF') && (
           <div>
             <label className="block text-sm font-semibold text-foreground mb-2">
               {t('menusLabel')}
@@ -278,7 +330,11 @@ export default function CreateUserForm({
         </Link>
         <button
           type="submit"
-          disabled={submitting || (role === 'TEACHER' && unlinkedTeachers.length === 0)}
+          disabled={
+            submitting ||
+            (role === 'TEACHER' && unlinkedTeachers.length === 0) ||
+            (role === 'STAFF' && unlinkedStaff.length === 0)
+          }
           className="px-6 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md disabled:opacity-50"
         >
           {submitting ? t('submitting') : t('submit')}

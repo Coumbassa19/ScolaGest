@@ -35,14 +35,17 @@ export const TEACHER_CORE_MENUS: readonly MenuKey[] = ['dashboard', 'grades', 's
 // to land after login).
 export const DIRECTION_CORE_MENUS: readonly MenuKey[] = ['dashboard'];
 
+// STAFF (non-teaching personnel — direction, comptabilité, surveillance,
+// etc., see the Staff model) accounts work exactly like DIRECTION: no
+// implicit menus beyond the dashboard, everything else is admin-picked via
+// `enabledMenus` at account creation.
+export const STAFF_CORE_MENUS: readonly MenuKey[] = ['dashboard'];
+
 /**
  * The effective set of menu keys a user can see, given their role and
  * stored `enabledMenus`. `null` return means "unrestricted" (ADMIN/SUPERADMIN).
  */
-export function effectiveMenus(
-  role: string,
-  enabledMenus: unknown,
-): readonly MenuKey[] | null {
+export function effectiveMenus(role: string, enabledMenus: unknown): readonly MenuKey[] | null {
   if (role === 'ADMIN' || role === 'SUPERADMIN') return null;
 
   const stored: MenuKey[] = Array.isArray(enabledMenus)
@@ -54,6 +57,9 @@ export function effectiveMenus(
   }
   if (role === 'DIRECTION') {
     return Array.from(new Set([...DIRECTION_CORE_MENUS, ...stored]));
+  }
+  if (role === 'STAFF') {
+    return Array.from(new Set([...STAFF_CORE_MENUS, ...stored]));
   }
   // USER (legacy/self-signup) or any unrecognized role: no domain menus.
   return [];

@@ -33,6 +33,7 @@ const STAFF_ROLE_KEY: Record<string, string> = {
   SUPERADMIN: 'roleSuperadmin',
   DIRECTION: 'roleDirection',
   TEACHER: 'roleTeacher',
+  STAFF: 'roleStaff',
 };
 
 export default async function SettingsPage() {
@@ -46,7 +47,7 @@ export default async function SettingsPage() {
   const isAdmin = staff.user.role === 'ADMIN' || staff.user.role === 'SUPERADMIN';
   const staffUsers = isAdmin
     ? await prisma.user.findMany({
-        where: { schoolId, role: { in: ['ADMIN', 'SUPERADMIN', 'DIRECTION', 'TEACHER'] } },
+        where: { schoolId, role: { in: ['ADMIN', 'SUPERADMIN', 'DIRECTION', 'TEACHER', 'STAFF'] } },
         select: { id: true, email: true, name: true, role: true, status: true },
         orderBy: { createdAt: 'desc' },
       })

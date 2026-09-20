@@ -32,7 +32,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { verifyCsrf, generateSetupToken } from '@/lib/server/auth';
 import { requireAdmin } from '@/lib/server/middleware';
-import { prisma } from '@/lib/server/prisma';
+import { prisma, scopedPrisma } from '@/lib/server/prisma';
 import { clampLimit, cursorWhere, buildPage, decodeCursor } from '@/lib/server/pagination/paginate';
 import { enforceAdminRateLimit } from '@/lib/server/middleware/rate-limit-by-userid';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
@@ -108,21 +108,26 @@ const STAFF_ROLE_LABEL: Record<string, { fr: string; en: string }> = {
   SUPERADMIN: { fr: 'Super-administrateur', en: 'Super-administrator' },
   DIRECTION: { fr: 'Direction', en: 'Direction' },
   TEACHER: { fr: 'Enseignant', en: 'Teacher' },
+  STAFF: { fr: 'Personnel', en: 'Staff' },
 };
 
 const CreateBody = z.object({
   email: zEmail,
   name: z.string().trim().max(120).optional(),
-  role: z.enum(['ADMIN', 'SUPERADMIN', 'DIRECTION', 'TEACHER']),
+  role: z.enum(['ADMIN', 'SUPERADMIN', 'DIRECTION', 'TEACHER', 'STAFF']),
   /** Required when role is TEACHER — links the login to an existing HR Teacher row. */
   teacherId: z.string().optional(),
-  /** Bonus menus beyond the role's core set (see menu-keys.ts TEACHER_CORE_MENUS / DIRECTION_CORE_MENUS). */
+  /** Required when role is STAFF — links the login to an existing HR Staff row. */
+  staffId: z.string().optional(),
+  /** Bonus menus beyond the role's core set (see menu-keys.ts TEACHER_CORE_MENUS / DIRECTION_CORE_MENUS / STAFF_CORE_MENUS). */
   enabledMenus: z.array(z.enum(MENU_KEYS)).optional(),
 });
 
 type CreateDiscriminator =
   | { kind: 'TEACHER_NOT_FOUND' }
   | { kind: 'TEACHER_ALREADY_LINKED' }
+  | { kind: 'STAFF_NOT_FOUND' }
+  | { kind: 'STAFF_ALREADY_LINKED' }
   | { kind: 'EMAIL_TAKEN' }
   | { kind: 'OK'; userId: string; token: string };
 
@@ -141,7 +146,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const parsed = CreateBody.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'VALIDATION_FAILED', message: 'Invalid request body', issues: parsed.error.issues },
+        {
+          error: 'VALIDATION_FAILED',
+          message: 'Invalid request body',
+          issues: parsed.error.issues,
+        },
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
@@ -165,15 +174,47 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
+    if (data.role === 'STAFF' && !data.staffId) {
+      return NextResponse.json(
+        {
+          error: 'STAFF_ID_REQUIRED',
+          message: 'Select which staff member this login belongs to.',
+        },
+        { status: 400, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
+
+    // requireAdmin's AdminContext doesn't carry schoolId (login must resolve
+    // a user by email before any tenant is known), so it's re-read here.
+    // Teacher/Staff are tenant-scoped models (see TENANT_SCOPED_MODELS in
+    // src/lib/server/prisma.ts) — looking them up (and creating the new
+    // User's own schoolId) must go through a schoolId-bound client, not the
+    // plain unscoped `prisma` import, or the tenant-scope guard throws.
+    const actingAdmin = await prisma.user.findUnique({
+      where: { id: auth.admin.id },
+      select: { schoolId: true },
+    });
+    if (!actingAdmin?.schoolId) {
+      return NextResponse.json(
+        { error: 'NO_SCHOOL', message: 'Your account is not linked to a school.' },
+        { status: 400, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
+    const schoolId = actingAdmin.schoolId;
+    const schoolPrisma = scopedPrisma(schoolId);
 
     const token = generateSetupToken();
     const expiresAt = new Date(Date.now() + SETUP_TTL_MS);
 
-    const result: CreateDiscriminator = await prisma.$transaction(async (tx) => {
+    const result: CreateDiscriminator = await schoolPrisma.$transaction(async (tx) => {
       if (data.role === 'TEACHER' && data.teacherId) {
+        // select must include schoolId — the tenant-scope extension's
+        // post-fetch ownership check reads it off the result to verify the
+        // row belongs to this school (see UNIQUE_READ_OPS in prisma.ts); a
+        // narrower select silently makes every row look cross-tenant.
         const teacher = await tx.teacher.findUnique({
           where: { id: data.teacherId },
-          select: { id: true },
+          select: { id: true, schoolId: true },
         });
         if (!teacher) return { kind: 'TEACHER_NOT_FOUND' as const };
 
@@ -184,7 +225,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         if (linked) return { kind: 'TEACHER_ALREADY_LINKED' as const };
       }
 
-      const existing = await tx.user.findUnique({ where: { email: data.email }, select: { id: true } });
+      if (data.role === 'STAFF' && data.staffId) {
+        // See the schoolId comment on the Teacher lookup above.
+        const staffMember = await tx.staff.findUnique({
+          where: { id: data.staffId },
+          select: { id: true, schoolId: true },
+        });
+        if (!staffMember) return { kind: 'STAFF_NOT_FOUND' as const };
+
+        const linked = await tx.user.findUnique({
+          where: { staffId: data.staffId },
+          select: { id: true },
+        });
+        if (linked) return { kind: 'STAFF_ALREADY_LINKED' as const };
+      }
+
+      const existing = await tx.user.findUnique({
+        where: { email: data.email },
+        select: { id: true },
+      });
       if (existing) return { kind: 'EMAIL_TAKEN' as const };
 
       const created = await tx.user.create({
@@ -192,7 +251,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           email: data.email,
           ...(data.name ? { name: data.name } : {}),
           role: data.role,
+          schoolId,
           ...(data.role === 'TEACHER' && data.teacherId ? { teacherId: data.teacherId } : {}),
+          ...(data.role === 'STAFF' && data.staffId ? { staffId: data.staffId } : {}),
           ...(data.enabledMenus ? { enabledMenus: data.enabledMenus } : {}),
         },
         select: { id: true },
@@ -222,6 +283,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (result.kind === 'TEACHER_ALREADY_LINKED') {
       return NextResponse.json(
         { error: 'TEACHER_ALREADY_LINKED', message: 'This teacher already has a login account.' },
+        { status: 409, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
+    if (result.kind === 'STAFF_NOT_FOUND') {
+      return NextResponse.json(
+        { error: 'STAFF_NOT_FOUND', message: 'Staff member not found' },
+        { status: 404, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
+    if (result.kind === 'STAFF_ALREADY_LINKED') {
+      return NextResponse.json(
+        {
+          error: 'STAFF_ALREADY_LINKED',
+          message: 'This staff member already has a login account.',
+        },
         { status: 409, headers: { 'x-request-id': ctx.requestId } },
       );
     }
@@ -265,7 +341,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       emailError = sendResult.lastError;
     }
 
-    const user = await prisma.user.findUnique({ where: { id: result.userId }, select: USER_SELECT });
+    const user = await prisma.user.findUnique({
+      where: { id: result.userId },
+      select: USER_SELECT,
+    });
     return NextResponse.json(
       {
         user,

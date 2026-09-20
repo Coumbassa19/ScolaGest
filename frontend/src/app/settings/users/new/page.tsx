@@ -17,11 +17,18 @@ export default async function NewStaffUserPage() {
   const admin = await requireAdminPage('ADMIN');
   const prisma = admin.user.prisma;
 
-  const unlinkedTeachers = await prisma.teacher.findMany({
-    where: { user: null },
-    select: { id: true, nom: true, prenom: true },
-    orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
-  });
+  const [unlinkedTeachers, unlinkedStaff] = await Promise.all([
+    prisma.teacher.findMany({
+      where: { user: null },
+      select: { id: true, nom: true, prenom: true },
+      orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+    }),
+    prisma.staff.findMany({
+      where: { user: null },
+      select: { id: true, nom: true, prenom: true, poste: true },
+      orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+    }),
+  ]);
 
   const t = await getTranslations('settings.users.new');
 
@@ -49,6 +56,7 @@ export default async function NewStaffUserPage() {
           <CreateUserForm
             canCreateAdmins={admin.user.role === 'SUPERADMIN'}
             unlinkedTeachers={unlinkedTeachers}
+            unlinkedStaff={unlinkedStaff}
           />
         </div>
       </div>

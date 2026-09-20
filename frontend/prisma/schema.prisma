@@ -35,7 +35,7 @@ model User {
   // only, see /settings/users) — they carry NO admin-back-office rank
   // (roleRank treats them like USER, rank 0) and are gated instead by
   // `enabledMenus` (DIRECTION) or by `TeacherAssignment` rows (TEACHER).
-  role              String    @default("USER") // USER | ADMIN | SUPERADMIN | DIRECTION | TEACHER
+  role              String    @default("USER") // USER | ADMIN | SUPERADMIN | DIRECTION | TEACHER | STAFF | PARENT
   // Account status. ACTIVE = login + refresh allowed; SUSPENDED = both
   // refused with 403 ACCOUNT_SUSPENDED. Mutated via /api/admin/users/[id]/status
   // (ADMIN can suspend; only SUPERADMIN can restore).
@@ -45,10 +45,15 @@ model User {
   // this. @unique: one login per Teacher row.
   teacherId         String?   @unique
   teacher           Teacher?  @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  // Same pattern as teacherId, for a STAFF-role login linked to its HR
+  // roster record (Staff — direction/comptabilité/surveillance, paid a
+  // fixed monthly salary). @unique: one login per Staff row.
+  staffId           String?   @unique
+  staffMember       Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
   // Sidebar menu keys enabled for this account (see src/lib/server/permissions/menu-keys.ts).
   // null = unrestricted (ADMIN/SUPERADMIN always see everything and this is
-  // simply left null for them). For DIRECTION this is the admin-picked set;
-  // for TEACHER it's BONUS menus on top of the always-on core
+  // simply left null for them). For DIRECTION/STAFF this is the admin-picked
+  // set; for TEACHER it's BONUS menus on top of the always-on core
   // (dashboard/grades/subjects) — see requireStaff's effective-access rule.
   enabledMenus      Json?
   createdAt         DateTime  @default(now())
@@ -768,6 +773,10 @@ model Staff {
   createdAt      DateTime @default(now())
 
   payments StaffPayment[]
+  // The login account for this staff member, if one has been created (see
+  // /settings/users) — most Staff rows have none. Back-relation to
+  // User.staffId.
+  user     User?
 
   @@index([schoolId])
 }
