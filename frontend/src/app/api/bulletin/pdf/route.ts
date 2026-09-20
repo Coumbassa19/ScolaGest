@@ -48,7 +48,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const student = await prisma.student.findUnique({
       where: { id: studentId },
-      include: { schoolClass: true },
+      include: { schoolClass: { include: { cycle: true } } },
     });
     if (!student) {
       return NextResponse.json(
@@ -85,7 +85,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         coefficient: g.subject.coefficient,
         valeur: g.valeur,
       })),
-      observation: savedRemark?.observation ?? defaultObservation(moyenne),
+      observation:
+        savedRemark?.observation ?? defaultObservation(moyenne, student.schoolClass.cycle.noteMax),
       rang: rank?.rang ?? null,
       rangTied: rank?.tied ?? false,
       totalClasse: totalStudents,
@@ -96,6 +97,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       anneeScolaire,
       students: [pdfStudent],
       school,
+      noteMax: student.schoolClass.cycle.noteMax,
     });
 
     const filename =

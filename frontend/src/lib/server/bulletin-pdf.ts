@@ -48,6 +48,8 @@ export interface BulletinPdfOptions {
   anneeScolaire: string;
   students: BulletinPdfStudent[];
   school: BulletinPdfSchool;
+  /** Grading scale ("noté sur") of the class's cycle — see Cycles. One PDF batch = one class = one scale. */
+  noteMax: number;
 }
 
 function fmtDate(d: Date): string {
@@ -78,7 +80,7 @@ export async function buildBulletinsPdf(opts: BulletinPdfOptions): Promise<Buffe
   const students = opts.students.length > 0 ? opts.students : [];
   for (const student of students) {
     doc.addPage();
-    drawOnePage(doc, student, opts.periode, opts.anneeScolaire, opts.school);
+    drawOnePage(doc, student, opts.periode, opts.anneeScolaire, opts.school, opts.noteMax);
   }
   if (students.length === 0) doc.addPage();
 
@@ -92,6 +94,7 @@ function drawOnePage(
   periode: string,
   anneeScolaire: string,
   school: BulletinPdfSchool,
+  noteMax: number,
 ): void {
   const left = doc.page.margins.left;
   const width = doc.page.width - left - doc.page.margins.right;
@@ -232,12 +235,12 @@ function drawOnePage(
       x += colMatiere;
       doc.text(String(g.coefficient), x, y, { width: colCoeff, align: 'center' });
       x += colCoeff;
-      doc.text(`${g.valeur}/20`, x, y, { width: colNote, align: 'center' });
+      doc.text(`${g.valeur}/${noteMax}`, x, y, { width: colNote, align: 'center' });
       x += colNote;
       doc
         .font('Helvetica')
         .fillColor(COLORS.muted)
-        .text(getAppreciation(g.valeur), x, y, { width: colAppr, align: 'center' });
+        .text(getAppreciation(g.valeur, noteMax), x, y, { width: colAppr, align: 'center' });
       y += 17;
       doc
         .moveTo(left, y - 4)
@@ -261,15 +264,17 @@ function drawOnePage(
     x += colCoeff;
     doc
       .fillColor(COLORS.primary)
-      .text(moyenne !== null ? `${moyenne.toFixed(2)}/20` : '—', x, y + 6, {
+      .text(moyenne !== null ? `${moyenne.toFixed(2)}/${noteMax}` : '—', x, y + 6, {
         width: colNote,
         align: 'center',
       });
     x += colNote;
-    doc.fillColor(COLORS.text).text(moyenne !== null ? getAppreciation(moyenne) : '—', x, y + 6, {
-      width: colAppr,
-      align: 'center',
-    });
+    doc
+      .fillColor(COLORS.text)
+      .text(moyenne !== null ? getAppreciation(moyenne, noteMax) : '—', x, y + 6, {
+        width: colAppr,
+        align: 'center',
+      });
     y += 34;
   }
 
@@ -307,13 +312,13 @@ function drawOnePage(
     .font('Helvetica-Bold')
     .fillColor(COLORS.muted)
     .text('DÉCISION', decX, labelY, { width: boxW });
-  const decColor = moyenne !== null && moyenne >= 10 ? COLORS.success : COLORS.warning;
+  const decColor = moyenne !== null && moyenne >= noteMax * 0.5 ? COLORS.success : COLORS.warning;
   doc.rect(decX, boxTop, boxW, boxH).strokeColor(decColor).lineWidth(1.5).stroke();
   doc
     .fontSize(9)
     .font('Helvetica-Bold')
     .fillColor(decColor)
-    .text(decisionTextPlain(moyenne), decX + 6, boxTop + boxH / 2 - 10, {
+    .text(decisionTextPlain(moyenne, noteMax), decX + 6, boxTop + boxH / 2 - 10, {
       width: boxW - 12,
       align: 'center',
     });

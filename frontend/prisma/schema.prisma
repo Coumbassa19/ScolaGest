@@ -419,6 +419,7 @@ model School {
 
   users                User[]
   schoolClasses        SchoolClass[]
+  cycles               Cycle[]
   academicYears        AcademicYear[]
   students             Student[]
   absences             Absence[]
@@ -482,7 +483,7 @@ model SchoolSubscriptionPayment {
 //     comma-separated lists (matches the Banani mock UI, which used plain
 //     text inputs / checkboxes rather than a join table) instead of a
 //     full many-to-many join table.
-//   - Grade is one row per (student, subject, period) — a single 0-20
+//   - Grade is one row per (student, subject, period) — a single decimal
 //     "note finale" rather than modeling the sub-components (contrôle 1/2,
 //     devoirs, comportement) shown in the enter-grades mock, which would
 //     need a second table for no functional gain at this stage.
@@ -493,6 +494,10 @@ model SchoolClass {
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name      String // e.g. "6ème A" — unique per school, see @@unique below
   level     Int      @default(0) // sort order (lower = younger class)
+  // Restrict: a Cycle can't be deleted while classes still reference it
+  // (same pattern as Student.classId below).
+  cycleId   String
+  cycle     Cycle    @relation(fields: [cycleId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
 
   students           Student[]
@@ -504,6 +509,32 @@ model SchoolClass {
 
   @@unique([schoolId, name])
   @@index([level])
+  @@index([schoolId])
+  @@index([cycleId])
+}
+
+// A school "cycle" (Primaire / Secondaire / Universitaire, or whatever a
+// given school calls its own stages) — exists primarily to carry the
+// grading scale ("noté sur X") that its classes use, since primary,
+// secondary and university schools conventionally grade on different
+// scales (commonly /10, /20, /10 respectively). A Grade's effective max is
+// resolved via grade.classId -> SchoolClass.cycleId -> Cycle.noteMax, never
+// per-subject — a subject can be taught across cycles, but any single grade
+// always belongs to exactly one class, so there's never a mixed-scale
+// average. See src/lib/server/school-settings.ts equivalents for the
+// per-school customization pattern this follows.
+model Cycle {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String // e.g. "Primaire" — editable, unique per school
+  noteMax   Int // grading scale, e.g. 10 or 20
+  order     Int      @default(0) // display order
+  createdAt DateTime @default(now())
+
+  classes SchoolClass[]
+
+  @@unique([schoolId, name])
   @@index([schoolId])
 }
 
@@ -802,7 +833,11 @@ model Grade {
   // Student.anneeScolaire's existing default so pre-migration rows land on
   // the same year.
   anneeScolaire String      @default("2024-2025")
-  valeur        Int // 0-20
+  // Rounded to 1 decimal place at write time (see /api/grades and the
+  // grades import parser) — decimal grades (e.g. 14.5) are common practice,
+  // not just whole numbers. Range is 0..cycle.noteMax (10, 20, ...), see the
+  // Cycle model, not a fixed 0-20.
+  valeur        Float
   createdAt     DateTime    @default(now())
 
   @@unique([studentId, subjectId, periode, anneeScolaire])

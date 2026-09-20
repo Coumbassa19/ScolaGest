@@ -1,10 +1,9 @@
 'use client';
 
-// "+ Ajouter une classe" toggle panel on /classes — the only way to create a
-// SchoolClass manually (until now they only ever came from the dev seed
-// script). Posts to the existing /api/classes route (name, level). Also
-// doubles as the edit form on /classes/[id] (classId + initialData given →
-// PATCH instead of POST, panel always open, no collapse button).
+// "+ Ajouter un cycle" toggle panel on /cycles — the only way to create a
+// Cycle. Posts to /api/cycles (name, noteMax, order). Also doubles as the
+// edit form on /cycles/[id] (cycleId + initialData given → PATCH instead of
+// POST, panel always open, no collapse button). Mirrors AddClassForm.tsx.
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,44 +11,36 @@ import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 
-export interface ClassInitialData {
-  name: string;
-  level: number;
-  cycleId: string;
-}
-
-export interface CycleOption {
-  id: string;
+export interface CycleInitialData {
   name: string;
   noteMax: number;
+  order: number;
 }
 
-export default function AddClassForm({
-  classId,
+export default function AddCycleForm({
+  cycleId,
   initialData,
-  cycles,
 }: {
-  /** When provided, the form edits this class (PATCH) instead of creating one (POST). */
-  classId?: string;
-  initialData?: ClassInitialData;
-  cycles: CycleOption[];
+  /** When provided, the form edits this cycle (PATCH) instead of creating one (POST). */
+  cycleId?: string;
+  initialData?: CycleInitialData;
 }) {
   const router = useRouter();
-  const t = useTranslations('classes.form');
+  const t = useTranslations('cycles.form');
   const tCommon = useTranslations('common');
   const { toast } = useToast();
-  const isEdit = Boolean(classId);
+  const isEdit = Boolean(cycleId);
   const [open, setOpen] = useState(isEdit);
   const [name, setName] = useState(initialData?.name ?? '');
-  const [level, setLevel] = useState(String(initialData?.level ?? 0));
-  const [cycleId, setCycleId] = useState(initialData?.cycleId ?? cycles[0]?.id ?? '');
+  const [noteMax, setNoteMax] = useState(String(initialData?.noteMax ?? 20));
+  const [order, setOrder] = useState(String(initialData?.order ?? 0));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function resetForm() {
     setName('');
-    setLevel('0');
-    setCycleId(cycles[0]?.id ?? '');
+    setNoteMax('20');
+    setOrder('0');
     setError(null);
   }
 
@@ -61,20 +52,21 @@ export default function AddClassForm({
       setError(t('errorNameRequired'));
       return;
     }
-    if (!cycleId) {
-      setError(t('errorCycleRequired'));
+    const noteMaxNum = Number(noteMax);
+    if (!Number.isInteger(noteMaxNum) || noteMaxNum < 1) {
+      setError(t('errorNoteMaxInvalid'));
       return;
     }
 
     setSubmitting(true);
     try {
-      const body = { name: name.trim(), level: Number(level) || 0, cycleId };
+      const body = { name: name.trim(), noteMax: noteMaxNum, order: Number(order) || 0 };
       if (isEdit) {
-        await api(`/api/classes/${classId}`, { method: 'PATCH', body });
+        await api(`/api/cycles/${cycleId}`, { method: 'PATCH', body });
         toast(tCommon('updatedToast'), 'success');
-        router.push('/classes');
+        router.push('/cycles');
       } else {
-        await api('/api/classes', { method: 'POST', body });
+        await api('/api/cycles', { method: 'POST', body });
         toast(tCommon('savedToast'), 'success');
         resetForm();
         setOpen(false);
@@ -94,7 +86,7 @@ export default function AddClassForm({
         onClick={() => setOpen(true)}
         className="px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-md"
       >
-        {t('addClass')}
+        {t('addCycle')}
       </button>
     );
   }
@@ -136,35 +128,30 @@ export default function AddClassForm({
           </div>
           <div>
             <label className="block text-sm font-semibold text-foreground mb-2">
-              {t('levelLabel')}
+              {t('noteMaxLabel')}
             </label>
             <input
               type="number"
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              min={0}
-              max={20}
+              value={noteMax}
+              onChange={(e) => setNoteMax(e.target.value)}
+              min={1}
+              max={100}
               className="w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm"
             />
-            <p className="text-xs text-muted-foreground mt-1">{t('levelHint')}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('noteMaxHint')}</p>
           </div>
           <div>
             <label className="block text-sm font-semibold text-foreground mb-2">
-              {t('cycleLabel')}
+              {t('orderLabel')}
             </label>
-            <select
-              value={cycleId}
-              onChange={(e) => setCycleId(e.target.value)}
+            <input
+              type="number"
+              value={order}
+              onChange={(e) => setOrder(e.target.value)}
+              min={0}
               className="w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm"
-            >
-              <option value="">{t('cyclePlaceholder')}</option>
-              {cycles.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} (/{c.noteMax})
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground mt-1">{t('cycleHint')}</p>
+            />
+            <p className="text-xs text-muted-foreground mt-1">{t('orderHint')}</p>
           </div>
         </div>
 
@@ -179,7 +166,7 @@ export default function AddClassForm({
             type="button"
             onClick={() => {
               if (isEdit) {
-                router.push('/classes');
+                router.push('/cycles');
               } else {
                 resetForm();
                 setOpen(false);

@@ -5,7 +5,12 @@ import Icon from '@/components/global/Icon';
 import BulletinObservation from '@/components/forms/BulletinObservation';
 import PrintButton from '@/components/PrintButton';
 import { formatRang } from '@/lib/rang';
-import { computeInitials, getAppreciationKey, defaultObservationKey, decisionKey } from '@/lib/bulletin-format';
+import {
+  computeInitials,
+  getAppreciationKey,
+  defaultObservationKey,
+  decisionKey,
+} from '@/lib/bulletin-format';
 import { computeClassRanking } from '@/lib/server/bulletin';
 import { getSchoolSettings } from '@/lib/server/school-settings';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
@@ -43,10 +48,10 @@ export default async function BulletinPage({
   const student = sp.studentId
     ? await prisma.student.findUnique({
         where: { id: sp.studentId },
-        include: { schoolClass: true },
+        include: { schoolClass: { include: { cycle: true } } },
       })
     : await prisma.student.findFirst({
-        include: { schoolClass: true },
+        include: { schoolClass: { include: { cycle: true } } },
         orderBy: { createdAt: 'asc' },
       });
 
@@ -83,6 +88,8 @@ export default async function BulletinPage({
   const totalCoeff = grades.reduce((sum, g) => sum + g.subject.coefficient, 0);
   const totalPoints = grades.reduce((sum, g) => sum + g.valeur * g.subject.coefficient, 0);
   const moyenne = totalCoeff > 0 ? totalPoints / totalCoeff : null;
+  // The student's class's cycle grading scale ("noté sur") — see Cycles.
+  const noteMax = student.schoolClass.cycle.noteMax;
 
   // Rang dans la classe — same competition-ranking rule as /grades (tied
   // moyennes share a rank, the next rank skips ahead by the tie count),
@@ -177,11 +184,15 @@ export default async function BulletinPage({
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase">{t('classLabel')}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                  {t('classLabel')}
+                </p>
                 <p className="font-semibold text-foreground mt-1">{student.schoolClass.name}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase">{t('matriculeLabel')}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                  {t('matriculeLabel')}
+                </p>
                 <p className="font-semibold text-foreground mt-1">{student.matricule}</p>
               </div>
               <div>
@@ -227,10 +238,10 @@ export default async function BulletinPage({
                         {g.subject.coefficient}
                       </td>
                       <td className="px-3 py-3 text-sm text-center font-semibold text-foreground">
-                        {g.valeur}/20
+                        {g.valeur}/{noteMax}
                       </td>
                       <td className="px-3 py-3 text-sm text-center text-muted-foreground">
-                        {t(`appreciation.${getAppreciationKey(g.valeur)}`)}
+                        {t(`appreciation.${getAppreciationKey(g.valeur, noteMax)}`)}
                       </td>
                     </tr>
                   ))}
@@ -242,10 +253,12 @@ export default async function BulletinPage({
                       {totalCoeff}
                     </td>
                     <td className="px-3 py-3 text-sm text-center font-semibold text-primary text-base">
-                      {moyenne !== null ? moyenne.toFixed(2) : '—'}/20
+                      {moyenne !== null ? moyenne.toFixed(2) : '—'}/{noteMax}
                     </td>
                     <td className="px-3 py-3 text-sm text-center font-semibold text-foreground">
-                      {moyenne !== null ? t(`appreciation.${getAppreciationKey(moyenne)}`) : '—'}
+                      {moyenne !== null
+                        ? t(`appreciation.${getAppreciationKey(moyenne, noteMax)}`)
+                        : '—'}
                     </td>
                   </tr>
                 </tbody>
@@ -263,7 +276,10 @@ export default async function BulletinPage({
                 <BulletinObservation
                   studentId={student.id}
                   periode={periode}
-                  initialValue={savedRemark?.observation ?? t(`observations.${defaultObservationKey(moyenne)}`)}
+                  initialValue={
+                    savedRemark?.observation ??
+                    t(`observations.${defaultObservationKey(moyenne, noteMax)}`)
+                  }
                 />
               </div>
               <div>
@@ -272,18 +288,22 @@ export default async function BulletinPage({
                 </p>
                 <div
                   className={`border-2 rounded-md px-3 py-3 min-h-16 flex items-center ${
-                    moyenne !== null && moyenne >= 10 ? 'border-success' : 'border-warning'
+                    moyenne !== null && moyenne >= noteMax * 0.5
+                      ? 'border-success'
+                      : 'border-warning'
                   }`}
                 >
                   <span
-                    className={`text-sm font-semibold ${moyenne !== null && moyenne >= 10 ? 'text-success' : 'text-warning'}`}
+                    className={`text-sm font-semibold ${moyenne !== null && moyenne >= noteMax * 0.5 ? 'text-success' : 'text-warning'}`}
                   >
-                    {t(`decision.${decisionKey(moyenne)}`)}
+                    {t(`decision.${decisionKey(moyenne, noteMax)}`)}
                   </span>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{t('rankLabel')}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                  {t('rankLabel')}
+                </p>
                 <div className="border-2 border-primary rounded-md px-3 py-3 min-h-16 flex items-center justify-center">
                   <span className="text-xl font-bold text-primary">
                     {rang !== null

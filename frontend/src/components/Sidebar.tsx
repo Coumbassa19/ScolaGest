@@ -33,13 +33,18 @@ const navItems: NavItem[] = [
     icon: 'users',
     labelKey: 'studentsGroup',
     submenu: [
-      { key: 'students-list', labelKey: 'studentsList', href: '/students' },
       { key: 'students-add', labelKey: 'studentsAdd', href: '/add-student' },
       { key: 'students-reregister', labelKey: 'studentsReregister', href: '/reregister-student' },
+      { key: 'students-list', labelKey: 'studentsList', href: '/students' },
       { key: 'students-import', labelKey: 'studentsImport', href: '/students/import' },
-      { key: 'students-cards', labelKey: 'studentsCards', href: '/student-cards' },
-      { key: 'students-total-effectif', labelKey: 'studentsTotalEffectif', href: '/total-effectif' },
       { key: 'students-classes', labelKey: 'studentsClasses', href: '/classes' },
+      { key: 'students-cycles', labelKey: 'studentsCycles', href: '/cycles' },
+      { key: 'students-cards', labelKey: 'studentsCards', href: '/student-cards' },
+      {
+        key: 'students-total-effectif',
+        labelKey: 'studentsTotalEffectif',
+        href: '/total-effectif',
+      },
     ],
   },
   { key: 'teachers', icon: 'graduation-cap', labelKey: 'teachers', href: '/teachers' },
@@ -51,7 +56,11 @@ const navItems: NavItem[] = [
     icon: 'wallet',
     labelKey: 'accountingGroup',
     submenu: [
-      { key: 'accounting-registration', labelKey: 'accountingRegistration', href: '/accounting/registration' },
+      {
+        key: 'accounting-registration',
+        labelKey: 'accountingRegistration',
+        href: '/accounting/registration',
+      },
       { key: 'accounting-tuition', labelKey: 'accountingTuition', href: '/accounting/tuition' },
       {
         key: 'accounting-teacher-payments',

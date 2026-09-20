@@ -164,6 +164,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           trialEndsAt,
         },
       });
+      // Every new school starts with the 3 standard grading cycles (see
+      // Cycle model / scripts/backfill-cycles.ts) so the admin can create
+      // classes right away without a separate setup step.
+      await tx.cycle.createMany({
+        data: [
+          { schoolId: school.id, name: 'Primaire', noteMax: 10, order: 1 },
+          { schoolId: school.id, name: 'Secondaire', noteMax: 20, order: 2 },
+          { schoolId: school.id, name: 'Universitaire', noteMax: 10, order: 3 },
+        ],
+      });
       const user = await tx.user.create({
         data: {
           email,

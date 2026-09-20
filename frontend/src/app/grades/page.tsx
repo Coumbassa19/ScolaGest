@@ -16,10 +16,12 @@ export const metadata: Metadata = {
 
 const PERIODE_VALUES = ['T1', 'T2', 'T3'] as const;
 
-function noteColor(n: number | null): string {
+// Thresholds are proportions of `max` (the class's cycle grading scale —
+// see Cycles), matching src/lib/bulletin-format.ts's getAppreciationKey.
+function noteColor(n: number | null, max = 20): string {
   if (n === null) return 'text-muted-foreground';
-  if (n >= 14) return 'text-success';
-  if (n >= 10) return 'text-foreground';
+  if (n >= max * 0.7) return 'text-success';
+  if (n >= max * 0.5) return 'text-foreground';
   return 'text-warning';
 }
 
@@ -53,6 +55,7 @@ export default async function GradesPage({
     prisma.schoolClass.findMany({
       where: teacherClassIds ? { id: { in: teacherClassIds } } : {},
       orderBy: [{ level: 'desc' }, { name: 'asc' }],
+      include: { cycle: { select: { noteMax: true } } },
     }),
     prisma.academicYear.findMany({
       orderBy: [{ isCurrent: 'desc' }, { label: 'desc' }],
@@ -66,6 +69,9 @@ export default async function GradesPage({
   const classId =
     (sp.classId && classes.some((c) => c.id === sp.classId) ? sp.classId : classes[0]?.id) ||
     undefined;
+  // The class's cycle grading scale ("noté sur") — see Cycles. Falls back to
+  // 20 only when no class is selected yet (nothing to grade against).
+  const classNoteMax = classes.find((c) => c.id === classId)?.cycle.noteMax ?? 20;
   const periode = sp.periode || 'T1';
   const anneeScolaire = sp.anneeScolaire || academicYears[0]?.label || '2024-2025';
   const search = sp.search?.trim() || undefined;
@@ -333,8 +339,8 @@ export default async function GradesPage({
                               key={m.id}
                               label={`${m.nom} (${t('coeffAbbrev', { value: m.coefficient })})`}
                               value={
-                                <span className={noteColor(note)}>
-                                  {note !== null ? `${note}/20` : '—'}
+                                <span className={noteColor(note, classNoteMax)}>
+                                  {note !== null ? `${note}/${classNoteMax}` : '—'}
                                 </span>
                               }
                             />
@@ -343,18 +349,8 @@ export default async function GradesPage({
                         <CardField
                           label={t('headerAverage')}
                           value={
-                            <span
-                              className={`font-semibold ${
-                                moyenne === null
-                                  ? 'text-muted-foreground'
-                                  : moyenne >= 14
-                                    ? 'text-success'
-                                    : moyenne >= 10
-                                      ? 'text-foreground'
-                                      : 'text-warning'
-                              }`}
-                            >
-                              {moyenne !== null ? `${moyenne.toFixed(2)}/20` : '—'}
+                            <span className={`font-semibold ${noteColor(moyenne, classNoteMax)}`}>
+                              {moyenne !== null ? `${moyenne.toFixed(2)}/${classNoteMax}` : '—'}
                             </span>
                           }
                         />
@@ -433,28 +429,24 @@ export default async function GradesPage({
                             const note = noteByStudentSubject.get(`${student.id}:${m.id}`) ?? null;
                             return (
                               <div key={m.id} className="text-center">
-                                <span className={`text-sm font-semibold ${noteColor(note)}`}>
+                                <span
+                                  className={`text-sm font-semibold ${noteColor(note, classNoteMax)}`}
+                                >
                                   {note !== null ? note : '—'}
                                 </span>
-                                <span className="text-xs text-muted-foreground">/20</span>
+                                <span className="text-xs text-muted-foreground">
+                                  /{classNoteMax}
+                                </span>
                               </div>
                             );
                           })}
                           <div className="text-center">
                             <span
-                              className={`text-sm font-semibold ${
-                                moyenne === null
-                                  ? 'text-muted-foreground'
-                                  : moyenne >= 14
-                                    ? 'text-success'
-                                    : moyenne >= 10
-                                      ? 'text-foreground'
-                                      : 'text-warning'
-                              }`}
+                              className={`text-sm font-semibold ${noteColor(moyenne, classNoteMax)}`}
                             >
                               {moyenne !== null ? moyenne.toFixed(2) : '—'}
                             </span>
-                            <span className="text-xs text-muted-foreground">/20</span>
+                            <span className="text-xs text-muted-foreground">/{classNoteMax}</span>
                           </div>
                           <div className="text-center">
                             <span
@@ -501,7 +493,7 @@ export default async function GradesPage({
                         return (
                           <div key={m.id} className="text-center">
                             <span
-                              className={`text-xs font-semibold ${avg !== '—' && parseFloat(avg) >= 10 ? 'text-success' : 'text-warning'}`}
+                              className={`text-xs font-semibold ${avg !== '—' && parseFloat(avg) >= classNoteMax * 0.5 ? 'text-success' : 'text-warning'}`}
                             >
                               {avg}
                             </span>

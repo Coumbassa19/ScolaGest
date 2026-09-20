@@ -1,11 +1,9 @@
-// GET  /api/classes — list all school classes. Despite the name, nothing
-//      else in the app actually fetches this route today (add-student,
-//      enter-grades, schedule, etc. all load their class dropdowns via a
-//      direct prisma query in their own server component) — so unlike
-//      GET /api/students, this isn't proven shared cross-menu
-//      infrastructure, and is gated to the 'students' menu like everything
-//      else here rather than left unscoped on a guess.
-// POST /api/classes — create a class (e.g. "6ème A"). Also 'students' menu.
+// GET  /api/cycles — list all school cycles (Primaire/Secondaire/Universitaire
+//      by default, editable/extendable per school). Ordered by `order` then
+//      `name` so the dropdown/list always shows the school's chosen sequence.
+// POST /api/cycles — create a cycle (name + grading scale "noté sur").
+//      Gated to the 'students' menu, same as classes (managing cycles is
+//      roster/grading-structure administration, not a separate section).
 //
 // `runtime = 'nodejs'` is required by the runtime-enforcement test
 // (frontend/src/lib/server/observability/runtime-enforcement.test.ts).
@@ -18,12 +16,11 @@ import { verifyCsrf } from '@/lib/server/auth';
 import { requireStaff } from '@/lib/server/middleware/require-staff';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 import { requireSchoolId } from '@/lib/server/tenant/context';
-import { zCuid } from '@/lib/server/zod-helpers';
 
 const Body = z.object({
   name: z.string().trim().min(1).max(50),
-  level: z.number().int().min(0).max(20).optional(),
-  cycleId: zCuid,
+  noteMax: z.number().int().min(1).max(100),
+  order: z.number().int().min(0).optional(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -33,10 +30,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (auth instanceof NextResponse) return auth;
     const prisma = auth.user.prisma;
 
-    const classes = await prisma.schoolClass.findMany({
-      orderBy: [{ level: 'desc' }, { name: 'asc' }],
+    const cycles = await prisma.cycle.findMany({
+      orderBy: [{ order: 'asc' }, { name: 'asc' }],
     });
-    return NextResponse.json({ classes }, { headers: { 'x-request-id': ctx.requestId } });
+    return NextResponse.json({ cycles }, { headers: { 'x-request-id': ctx.requestId } });
   });
 }
 
@@ -61,25 +58,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
-    const cycle = await prisma.cycle.findUnique({ where: { id: parsed.data.cycleId } });
-    if (!cycle) {
-      return NextResponse.json(
-        { error: 'CYCLE_NOT_FOUND', message: 'Cycle introuvable' },
-        { status: 400, headers: { 'x-request-id': ctx.requestId } },
-      );
-    }
 
-    const schoolClass = await prisma.schoolClass.create({
-      data: {
-        schoolId: requireSchoolId(auth.user.schoolId),
-        name: parsed.data.name,
-        level: parsed.data.level ?? 0,
-        cycleId: parsed.data.cycleId,
-      },
-    });
-    return NextResponse.json(
-      { class: schoolClass },
-      { status: 201, headers: { 'x-request-id': ctx.requestId } },
-    );
+    try {
+      const cycle = await prisma.cycle.create({
+        data: {
+          schoolId: requireSchoolId(auth.user.schoolId),
+          name: parsed.data.name,
+          noteMax: parsed.data.noteMax,
+          order: parsed.data.order ?? 0,
+        },
+      });
+      return NextResponse.json(
+        { cycle },
+        { status: 201, headers: { 'x-request-id': ctx.requestId } },
+      );
+    } catch (err) {
+      const code = typeof err === 'object' && err !== null && 'code' in err ? err.code : null;
+      if (code === 'P2002') {
+        return NextResponse.json(
+          { error: 'CYCLE_ALREADY_EXISTS', message: 'Un cycle porte déjà ce nom' },
+          { status: 409, headers: { 'x-request-id': ctx.requestId } },
+        );
+      }
+      throw err;
+    }
   });
 }

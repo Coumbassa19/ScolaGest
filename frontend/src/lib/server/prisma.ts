@@ -47,6 +47,7 @@ import { PrismaClient } from '@prisma/client';
 // ───────────────────────────────────────────────────────────────────────
 const TENANT_SCOPED_MODELS = new Set([
   'SchoolClass',
+  'Cycle',
   'AcademicYear',
   'Student',
   'Absence',

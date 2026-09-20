@@ -28,7 +28,7 @@ export default async function EnterGradesPage() {
     prisma.schoolClass.findMany({
       where: teacherClassIds ? { id: { in: teacherClassIds } } : {},
       orderBy: [{ level: 'desc' }, { name: 'asc' }],
-      select: { id: true, name: true },
+      select: { id: true, name: true, cycle: { select: { noteMax: true } } },
     }),
     prisma.subject.findMany({
       where: teacherSubjectIds ? { id: { in: teacherSubjectIds } } : {},
@@ -66,7 +66,7 @@ export default async function EnterGradesPage() {
           </div>
         ) : (
           <EnterGradesForm
-            classes={classes}
+            classes={classes.map((c) => ({ id: c.id, name: c.name, noteMax: c.cycle.noteMax }))}
             subjects={subjects}
             academicYears={academicYears.map((y) => y.label)}
           />

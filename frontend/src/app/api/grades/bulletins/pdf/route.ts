@@ -49,7 +49,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
 
     const [schoolClass, students, grades, remarks, ranking, school] = await Promise.all([
-      prisma.schoolClass.findUnique({ where: { id: classId } }),
+      prisma.schoolClass.findUnique({ where: { id: classId }, include: { cycle: true } }),
       prisma.student.findMany({
         where: { classId },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
@@ -107,7 +107,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           coefficient: g.subject.coefficient,
           valeur: g.valeur,
         })),
-        observation: remarkByStudent.get(s.id) ?? defaultObservation(moyenne),
+        observation:
+          remarkByStudent.get(s.id) ?? defaultObservation(moyenne, schoolClass.cycle.noteMax),
         rang: rank?.rang ?? null,
         rangTied: rank?.tied ?? false,
         totalClasse: totalStudents,
@@ -119,6 +120,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       anneeScolaire,
       students: pdfStudents,
       school,
+      noteMax: schoolClass.cycle.noteMax,
     });
 
     const filename = `bulletins-${schoolClass.name}-${periode}-${anneeScolaire}.pdf`.replace(

@@ -29,11 +29,16 @@ export type AppreciationKey = 'excellent' | 'veryGood' | 'good' | 'fair' | 'weak
 // (/bulletin) and /grades resolve it via next-intl's `bulletin` namespace so
 // it renders in the viewer's locale; the PDF export (bulletin-pdf.ts) keeps
 // using getAppreciation below for its still French-only output.
-export function getAppreciationKey(note: number): AppreciationKey {
-  if (note >= 16) return 'excellent';
-  if (note >= 14) return 'veryGood';
-  if (note >= 12) return 'good';
-  if (note >= 10) return 'fair';
+//
+// Thresholds are proportions of `max` (the class's cycle grading scale —
+// see Cycles), not fixed literals: 16/14/12/10 out of a /20 scale are
+// 80/70/60/50%, which is what a class still on /20 (the default) gets
+// unchanged; a /10 class gets 8/7/6/5 — the same proportions.
+export function getAppreciationKey(note: number, max = 20): AppreciationKey {
+  if (note >= max * 0.8) return 'excellent';
+  if (note >= max * 0.7) return 'veryGood';
+  if (note >= max * 0.6) return 'good';
+  if (note >= max * 0.5) return 'fair';
   return 'weak';
 }
 
@@ -46,19 +51,19 @@ const APPRECIATION_FR: Record<AppreciationKey, string> = {
 };
 
 // French-only text form, used by the PDF export.
-export function getAppreciation(note: number): string {
-  return APPRECIATION_FR[getAppreciationKey(note)];
+export function getAppreciation(note: number, max = 20): string {
+  return APPRECIATION_FR[getAppreciationKey(note, max)];
 }
 
 export type ObservationKey = 'pending' | 'good' | 'needsWork';
 
-export function defaultObservationKey(moyenne: number | null): ObservationKey {
+export function defaultObservationKey(moyenne: number | null, max = 20): ObservationKey {
   if (moyenne === null) return 'pending';
-  return moyenne >= 12 ? 'good' : 'needsWork';
+  return moyenne >= max * 0.6 ? 'good' : 'needsWork';
 }
 
-export function defaultObservation(moyenne: number | null): string {
-  const key = defaultObservationKey(moyenne);
+export function defaultObservation(moyenne: number | null, max = 20): string {
+  const key = defaultObservationKey(moyenne, max);
   if (key === 'pending') return 'Notes en attente de saisie.';
   return key === 'good'
     ? 'Bon travail. Continuez ainsi.'
@@ -67,13 +72,13 @@ export function defaultObservation(moyenne: number | null): string {
 
 export type DecisionKey = 'pending' | 'pass' | 'watch';
 
-export function decisionKey(moyenne: number | null): DecisionKey {
+export function decisionKey(moyenne: number | null, max = 20): DecisionKey {
   if (moyenne === null) return 'pending';
-  return moyenne >= 10 ? 'pass' : 'watch';
+  return moyenne >= max * 0.5 ? 'pass' : 'watch';
 }
 
-export function decisionText(moyenne: number | null): string {
-  const key = decisionKey(moyenne);
+export function decisionText(moyenne: number | null, max = 20): string {
+  const key = decisionKey(moyenne, max);
   if (key === 'pending') return 'EN ATTENTE DE NOTES';
   return key === 'pass' ? '✓ ADMIS(E) AU TRIMESTRE SUIVANT' : '△ À SURVEILLER';
 }
@@ -81,7 +86,7 @@ export function decisionText(moyenne: number | null): string {
 // Same wording without the ✓/△ symbols — the PDF export draws text with the
 // standard Helvetica font (WinAnsi encoding), which can't represent those
 // glyphs and would otherwise render garbage characters in their place.
-export function decisionTextPlain(moyenne: number | null): string {
+export function decisionTextPlain(moyenne: number | null, max = 20): string {
   if (moyenne === null) return 'EN ATTENTE DE NOTES';
-  return moyenne >= 10 ? 'ADMIS(E) AU TRIMESTRE SUIVANT' : 'À SURVEILLER';
+  return moyenne >= max * 0.5 ? 'ADMIS(E) AU TRIMESTRE SUIVANT' : 'À SURVEILLER';
 }
