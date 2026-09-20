@@ -21,6 +21,8 @@ export interface PayableTeacher {
   prenom: string;
   tauxHoraire: number | null;
   weeklyHours: number;
+  /** Outstanding (EN_COURS) salary advance flagged against THIS month — see Avances sur salaire. */
+  outstandingAdvance: number;
 }
 
 export interface TeacherPaymentInitialData {
@@ -57,7 +59,8 @@ function currentMonthValue(): string {
 
 function estimateMontant(teacher: PayableTeacher | null): string {
   if (!teacher?.tauxHoraire || !teacher.weeklyHours) return '';
-  return String(Math.round(teacher.weeklyHours * WEEKS_PER_MONTH * teacher.tauxHoraire));
+  const gross = Math.round(teacher.weeklyHours * WEEKS_PER_MONTH * teacher.tauxHoraire);
+  return String(Math.max(0, gross - teacher.outstandingAdvance));
 }
 
 export default function TeacherPaymentForm({
@@ -217,6 +220,13 @@ export default function TeacherPaymentForm({
                 hours: selectedTeacher.weeklyHours,
                 weeks: WEEKS_PER_MONTH,
                 rate: selectedTeacher.tauxHoraire.toLocaleString('fr-FR'),
+              })}
+            </p>
+          )}
+          {selectedTeacher && selectedTeacher.outstandingAdvance > 0 && (
+            <p className="text-xs text-warning mt-1">
+              {t('outstandingAdvanceHint', {
+                amount: selectedTeacher.outstandingAdvance.toLocaleString('fr-FR'),
               })}
             </p>
           )}

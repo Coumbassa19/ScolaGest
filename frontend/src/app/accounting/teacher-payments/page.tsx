@@ -62,22 +62,30 @@ export default async function TeacherPaymentsAccountingPage() {
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-  const [teachers, recentPayments, yearPayments, scheduleEntries] = await Promise.all([
-    prisma.teacher.findMany({ orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] }),
-    prisma.teacherPayment.findMany({
-      include: { teacher: true },
-      orderBy: { datePaiement: 'desc' },
-      take: 200,
-    }),
-    prisma.teacherPayment.findMany({
-      where: { datePaiement: { gte: startOfYear } },
-      select: { teacherId: true, montant: true, periode: true },
-    }),
-    prisma.scheduleEntry.findMany({
-      where: { teacherId: { not: null } },
-      select: { teacherId: true, heureDebut: true, heureFin: true },
-    }),
-  ]);
+  const [teachers, recentPayments, yearPayments, scheduleEntries, outstandingAdvances] =
+    await Promise.all([
+      prisma.teacher.findMany({ orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] }),
+      prisma.teacherPayment.findMany({
+        include: { teacher: true },
+        orderBy: { datePaiement: 'desc' },
+        take: 200,
+      }),
+      prisma.teacherPayment.findMany({
+        where: { datePaiement: { gte: startOfYear } },
+        select: { teacherId: true, montant: true, periode: true },
+      }),
+      prisma.scheduleEntry.findMany({
+        where: { teacherId: { not: null } },
+        select: { teacherId: true, heureDebut: true, heureFin: true },
+      }),
+      // Salary advances flagged against THIS month's pay (see Avances sur
+      // salaire) — subtracted from the auto-filled montant so a teacher who
+      // already took a cash advance isn't paid their full salary twice.
+      prisma.salaryAdvance.findMany({
+        where: { teacherId: { not: null }, statut: 'EN_COURS', periodeAAffecter: currentMonth },
+        select: { teacherId: true, montant: true },
+      }),
+    ]);
 
   const paidThisYearByTeacher = new Map<string, number>();
   const paidThisMonthByTeacher = new Set<string>();
@@ -98,6 +106,15 @@ export default async function TeacherPaymentsAccountingPage() {
     if (!e.teacherId) continue;
     const hours = hoursBetween(e.heureDebut, e.heureFin);
     weeklyHoursByTeacher.set(e.teacherId, (weeklyHoursByTeacher.get(e.teacherId) ?? 0) + hours);
+  }
+
+  const outstandingAdvanceByTeacher = new Map<string, number>();
+  for (const a of outstandingAdvances) {
+    if (!a.teacherId) continue;
+    outstandingAdvanceByTeacher.set(
+      a.teacherId,
+      (outstandingAdvanceByTeacher.get(a.teacherId) ?? 0) + a.montant,
+    );
   }
 
   // Estimated, not contractual — teachers are paid by the hour, so this is
@@ -148,6 +165,7 @@ export default async function TeacherPaymentsAccountingPage() {
                 prenom: teacher.prenom,
                 tauxHoraire: teacher.tauxHoraire,
                 weeklyHours: weeklyHoursByTeacher.get(teacher.id) ?? 0,
+                outstandingAdvance: outstandingAdvanceByTeacher.get(teacher.id) ?? 0,
               }))}
             />
           </div>
@@ -227,12 +245,21 @@ export default async function TeacherPaymentsAccountingPage() {
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
                           {t('headerHourlyRate')}
                         </span>
-                        <EditableSalaryCell teacherId={teacher.id} tauxHoraire={teacher.tauxHoraire} />
+                        <EditableSalaryCell
+                          teacherId={teacher.id}
+                          tauxHoraire={teacher.tauxHoraire}
+                        />
                       </div>
                       <CardField
                         label={t('headerPaidThisYear')}
                         value={`${fmt(paidThisYearByTeacher.get(teacher.id) ?? 0, locale)} GNF`}
                       />
+                      {Boolean(outstandingAdvanceByTeacher.get(teacher.id)) && (
+                        <CardField
+                          label={t('headerOutstandingAdvance')}
+                          value={`${fmt(outstandingAdvanceByTeacher.get(teacher.id) ?? 0, locale)} GNF`}
+                        />
+                      )}
                     </>
                   )}
                 />
@@ -271,13 +298,22 @@ export default async function TeacherPaymentsAccountingPage() {
                         >
                           <span className="col-span-2 text-sm font-semibold text-foreground">
                             {teacher.nom} {teacher.prenom}
+                            {Boolean(outstandingAdvanceByTeacher.get(teacher.id)) && (
+                              <span className="block text-xs font-normal text-warning">
+                                {t('headerOutstandingAdvance')}:{' '}
+                                {fmt(outstandingAdvanceByTeacher.get(teacher.id) ?? 0, locale)} GNF
+                              </span>
+                            )}
                           </span>
                           <span className="text-sm text-muted-foreground">
                             {weeklyHoursByTeacher.get(teacher.id)
                               ? `${weeklyHoursByTeacher.get(teacher.id)}h`
                               : '—'}
                           </span>
-                          <EditableSalaryCell teacherId={teacher.id} tauxHoraire={teacher.tauxHoraire} />
+                          <EditableSalaryCell
+                            teacherId={teacher.id}
+                            tauxHoraire={teacher.tauxHoraire}
+                          />
                           <span className="text-sm text-foreground">
                             {fmt(paidThisYearByTeacher.get(teacher.id) ?? 0, locale)} GNF
                           </span>
@@ -319,9 +355,18 @@ export default async function TeacherPaymentsAccountingPage() {
                           {fmtDate(p.datePaiement, locale)}
                         </div>
                       </div>
-                      <CardField label={t('headerMonthPaid')} value={fmtPeriode(p.periode, locale)} />
-                      <CardField label={t('headerAmount')} value={`${fmt(p.montant, locale)} GNF`} />
-                      <CardField label={t('headerMethod')} value={tc(`methods.${p.moyenPaiement}`)} />
+                      <CardField
+                        label={t('headerMonthPaid')}
+                        value={fmtPeriode(p.periode, locale)}
+                      />
+                      <CardField
+                        label={t('headerAmount')}
+                        value={`${fmt(p.montant, locale)} GNF`}
+                      />
+                      <CardField
+                        label={t('headerMethod')}
+                        value={tc(`methods.${p.moyenPaiement}`)}
+                      />
                       <div className="pt-1.5 flex justify-end">
                         <RowActions
                           editHref={`/accounting/teacher-payments/${p.id}`}

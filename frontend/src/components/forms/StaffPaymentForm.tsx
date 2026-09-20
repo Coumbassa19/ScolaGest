@@ -21,6 +21,8 @@ export interface PayableStaff {
   prenom: string;
   poste: string;
   salaireMensuel: number;
+  /** Outstanding (EN_COURS) salary advance flagged against THIS month — see Avances sur salaire. */
+  outstandingAdvance: number;
 }
 
 export interface StaffPaymentInitialData {
@@ -89,7 +91,7 @@ export default function StaffPaymentForm({
     setStaffId(id);
     if (montantAuto) {
       const s = staff.find((st) => st.id === id) ?? null;
-      setMontant(s ? String(s.salaireMensuel) : '');
+      setMontant(s ? String(Math.max(0, s.salaireMensuel - s.outstandingAdvance)) : '');
     }
   }
 
@@ -199,6 +201,13 @@ export default function StaffPaymentForm({
           </select>
           {selectedStaff && montantAuto && (
             <p className="text-xs text-success mt-1">{t('autoFilled')}</p>
+          )}
+          {selectedStaff && selectedStaff.outstandingAdvance > 0 && (
+            <p className="text-xs text-warning mt-1">
+              {t('outstandingAdvanceHint', {
+                amount: selectedStaff.outstandingAdvance.toLocaleString('fr-FR'),
+              })}
+            </p>
           )}
         </div>
 

@@ -442,6 +442,7 @@ model School {
   scheduleEntries      ScheduleEntry[]
   revenuePayments      RevenuePayment[]
   expenses             Expense[]
+  salaryAdvances       SalaryAdvance[]
   settings             SchoolSettings?
   subscriptionPayments SchoolSubscriptionPayment[]
 
@@ -726,6 +727,7 @@ model Teacher {
   subjects           Subject[]
   scheduleEntries    ScheduleEntry[]
   payments           TeacherPayment[]
+  advances           SalaryAdvance[]
   schoolMessages     SchoolMessage[]
   teacherAssignments TeacherAssignment[]
   // The login account for this teacher, if one has been created (see
@@ -775,6 +777,7 @@ model Staff {
   createdAt      DateTime @default(now())
 
   payments StaffPayment[]
+  advances SalaryAdvance[]
   // The login account for this staff member, if one has been created (see
   // /settings/users) — most Staff rows have none. Back-relation to
   // User.staffId.
@@ -801,6 +804,40 @@ model StaffPayment {
   @@unique([staffId, periode])
   @@index([staffId])
   @@index([periode])
+  @@index([schoolId])
+}
+
+// A salary advance (avance sur salaire) — a short-term loan to a teacher or
+// staff member, e.g. for a medical emergency, meant to be deducted from a
+// specific future month's pay. Exactly one of teacherId/staffId is set
+// (enforced at the application layer, not the schema — Prisma has no
+// portable "exactly one of" constraint). `periodeAAffecter` is the "YYYY-MM"
+// month this advance should reduce; Comptabilité > Paiement des enseignants
+// / Paiement des personnels reads outstanding (EN_COURS) advances for that
+// same person+month to show "montant net à payer" — the payment record
+// itself is untouched, this is purely a display-time subtraction. Marking
+// REMBOURSEE is a manual admin action (see PATCH), not automatic on
+// payment, since repayment doesn't always happen through payroll.
+model SalaryAdvance {
+  id               String   @id @default(cuid())
+  schoolId         String
+  school           School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherId        String?
+  teacher          Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  staffId          String?
+  staff            Staff?   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  montant          Int // smallest currency unit (GNF has no decimals)
+  date             DateTime @default(now()) // date à laquelle l'avance a été accordée
+  motif            String?
+  // "YYYY-MM" — the pay period this advance is meant to be deducted from.
+  periodeAAffecter String
+  statut           String   @default("EN_COURS") // EN_COURS | REMBOURSEE
+  moyenPaiement    String   @default("ESPECES") // ORANGE_MONEY | ESPECES | VIREMENT
+  createdAt        DateTime @default(now())
+
+  @@index([teacherId])
+  @@index([staffId])
+  @@index([periodeAAffecter])
   @@index([schoolId])
 }
 

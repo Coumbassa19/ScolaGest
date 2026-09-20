@@ -77,6 +77,11 @@ const navItems: NavItem[] = [
         labelKey: 'accountingExpenses',
         href: '/accounting/expenses',
       },
+      {
+        key: 'accounting-salary-advances',
+        labelKey: 'accountingSalaryAdvances',
+        href: '/accounting/salary-advances',
+      },
     ],
   },
   { key: 'absences', icon: 'user-x', labelKey: 'absences', href: '/absences' },

@@ -4,37 +4,44 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Sidebar from '@/components/Sidebar';
 import Icon from '@/components/global/Icon';
-import StaffPaymentForm from '@/components/forms/StaffPaymentForm';
+import AdvanceForm from '@/components/forms/AdvanceForm';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
 
 export const metadata: Metadata = {
-  title: 'Modifier le paiement',
+  title: 'Modifier l’avance',
 };
 
-export default async function EditStaffPaymentPage({
+export default async function EditSalaryAdvancePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const staffAuth = await requirePageAuth({ menuKey: 'accounting' });
-  const prisma = staffAuth.user.prisma;
+  const auth = await requirePageAuth({ menuKey: 'accounting' });
+  const prisma = auth.user.prisma;
 
-  const t = await getTranslations('accounting.staffPayments.edit');
+  const t = await getTranslations('accounting.salaryAdvances.edit');
   const tc = await getTranslations('accounting.common');
   const { id } = await params;
 
-  const [payment, staffMembers] = await Promise.all([
-    prisma.staffPayment.findUnique({ where: { id } }),
-    prisma.staff.findMany({ orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] }),
+  const [advance, teachers, staffMembers] = await Promise.all([
+    prisma.salaryAdvance.findUnique({ where: { id } }),
+    prisma.teacher.findMany({
+      select: { id: true, nom: true, prenom: true },
+      orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+    }),
+    prisma.staff.findMany({
+      select: { id: true, nom: true, prenom: true, poste: true },
+      orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+    }),
   ]);
 
-  if (!payment) notFound();
+  if (!advance) notFound();
 
   return (
     <div className="flex flex-col md:flex-row bg-background min-h-full font-body">
       <Sidebar
         activeItem="accounting"
-        activeSubmenu="accounting-staff-payments"
+        activeSubmenu="accounting-salary-advances"
         expandedMenu="accounting"
       />
 
@@ -42,7 +49,7 @@ export default async function EditStaffPaymentPage({
         {/* Header */}
         <div className="px-4 py-3 md:px-8 md:py-4 border-b border-border bg-secondary">
           <Link
-            href="/accounting/staff-payments"
+            href="/accounting/salary-advances"
             className="flex items-center gap-2 text-muted-foreground text-sm font-semibold mb-4"
           >
             <Icon i="arrow-left" size={16} />
@@ -55,24 +62,18 @@ export default async function EditStaffPaymentPage({
 
         {/* Content */}
         <div className="flex-1 px-4 py-4 md:px-8 md:py-6">
-          <StaffPaymentForm
-            paymentId={payment.id}
-            staff={staffMembers.map((s) => ({
-              id: s.id,
-              nom: s.nom,
-              prenom: s.prenom,
-              poste: s.poste,
-              salaireMensuel: s.salaireMensuel,
-              // Editing an existing payment never auto-recalculates the
-              // montant (montantAuto starts false in edit mode), so this
-              // isn't read here — only satisfying the PayableStaff type.
-              outstandingAdvance: 0,
-            }))}
+          <AdvanceForm
+            advanceId={advance.id}
+            teachers={teachers}
+            staff={staffMembers}
             initialData={{
-              staffId: payment.staffId,
-              periode: payment.periode,
-              montant: String(payment.montant),
-              moyenPaiement: payment.moyenPaiement as 'ESPECES' | 'ORANGE_MONEY' | 'VIREMENT',
+              personType: advance.teacherId ? 'TEACHER' : 'STAFF',
+              personId: advance.teacherId ?? advance.staffId ?? '',
+              montant: String(advance.montant),
+              date: advance.date.toISOString().slice(0, 10),
+              motif: advance.motif ?? '',
+              periodeAAffecter: advance.periodeAAffecter,
+              moyenPaiement: advance.moyenPaiement as 'ESPECES' | 'ORANGE_MONEY' | 'VIREMENT',
             }}
           />
         </div>

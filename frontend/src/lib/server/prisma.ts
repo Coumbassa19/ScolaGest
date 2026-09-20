@@ -57,6 +57,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'TeacherPayment',
   'Staff',
   'StaffPayment',
+  'SalaryAdvance',
   'TuitionPlan',
   'Subject',
   'TeacherAssignment',
@@ -98,6 +99,15 @@ interface OwnerLookupDelegate {
     where: unknown;
     select: { schoolId: true };
   }): Promise<{ schoolId: string } | null>;
+}
+
+/** Mimics Prisma's own "record not found" error shape (code `P2025`). */
+function notFoundError(model: string, detail = ''): Error & { code: string } {
+  const err = new Error(`No ${model} found${detail ? ` — ${detail}` : '.'}`) as Error & {
+    code: string;
+  };
+  err.code = 'P2025';
+  return err;
 }
 
 /**
@@ -155,7 +165,7 @@ function buildClient(base: PrismaClient, schoolId: string | undefined) {
             if (result === null) return result;
             if (!belongsToSchool) {
               if (operation === 'findUniqueOrThrow') {
-                throw new Error(`No ${model} found.`);
+                throw notFoundError(model);
               }
               return null;
             }
@@ -170,13 +180,17 @@ function buildClient(base: PrismaClient, schoolId: string | undefined) {
             const owner = await delegate.findUnique({ where: a.where, select: { schoolId: true } });
             if (operation === 'upsert') {
               if (owner && owner.schoolId !== sid) {
-                throw new Error(`No ${model} found — upsert refused (cross-tenant).`);
+                throw notFoundError(model, 'upsert refused (cross-tenant)');
               }
               a.create = { ...(a.create ?? {}), schoolId: sid };
               return query(a as never);
             }
             if (!owner || owner.schoolId !== sid) {
-              throw new Error(`No ${model} found.`);
+              // Mirrors Prisma's own P2025 ("record not found") so every
+              // route's existing `err.code === 'P2025' → 404` catch block
+              // (update/delete on an already-deleted or cross-tenant id)
+              // keeps working instead of leaking a raw 500.
+              throw notFoundError(model);
             }
             return query(args as never);
           }

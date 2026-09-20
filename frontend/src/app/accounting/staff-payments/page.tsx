@@ -48,7 +48,7 @@ export default async function StaffPaymentsAccountingPage() {
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-  const [staffMembers, recentPayments, yearPayments] = await Promise.all([
+  const [staffMembers, recentPayments, yearPayments, outstandingAdvances] = await Promise.all([
     prisma.staff.findMany({ orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] }),
     prisma.staffPayment.findMany({
       include: { staff: true },
@@ -59,6 +59,13 @@ export default async function StaffPaymentsAccountingPage() {
       where: { datePaiement: { gte: startOfYear } },
       select: { staffId: true, montant: true, periode: true },
     }),
+    // Salary advances flagged against THIS month's pay (see Avances sur
+    // salaire) — subtracted from the auto-filled montant so someone who
+    // already took a cash advance isn't paid their full salary twice.
+    prisma.salaryAdvance.findMany({
+      where: { staffId: { not: null }, statut: 'EN_COURS', periodeAAffecter: currentMonth },
+      select: { staffId: true, montant: true },
+    }),
   ]);
 
   const paidThisYearByStaff = new Map<string, number>();
@@ -66,6 +73,15 @@ export default async function StaffPaymentsAccountingPage() {
   for (const p of yearPayments) {
     paidThisYearByStaff.set(p.staffId, (paidThisYearByStaff.get(p.staffId) ?? 0) + p.montant);
     if (p.periode === currentMonth) paidThisMonthByStaff.add(p.staffId);
+  }
+
+  const outstandingAdvanceByStaff = new Map<string, number>();
+  for (const a of outstandingAdvances) {
+    if (!a.staffId) continue;
+    outstandingAdvanceByStaff.set(
+      a.staffId,
+      (outstandingAdvanceByStaff.get(a.staffId) ?? 0) + a.montant,
+    );
   }
 
   // Fixed monthly salaries — unlike teachers, staff aren't paid by the hour,
@@ -113,6 +129,7 @@ export default async function StaffPaymentsAccountingPage() {
                   prenom: s.prenom,
                   poste: s.poste,
                   salaireMensuel: s.salaireMensuel,
+                  outstandingAdvance: outstandingAdvanceByStaff.get(s.id) ?? 0,
                 }))}
               />
             </div>
@@ -192,6 +209,12 @@ export default async function StaffPaymentsAccountingPage() {
                         label={t('headerPaidThisYear')}
                         value={`${fmt(paidThisYearByStaff.get(s.id) ?? 0, locale)} GNF`}
                       />
+                      {Boolean(outstandingAdvanceByStaff.get(s.id)) && (
+                        <CardField
+                          label={t('headerOutstandingAdvance')}
+                          value={`${fmt(outstandingAdvanceByStaff.get(s.id) ?? 0, locale)} GNF`}
+                        />
+                      )}
                     </>
                   )}
                 />
@@ -230,6 +253,12 @@ export default async function StaffPaymentsAccountingPage() {
                         >
                           <span className="col-span-2 text-sm font-semibold text-foreground">
                             {s.nom} {s.prenom}
+                            {Boolean(outstandingAdvanceByStaff.get(s.id)) && (
+                              <span className="block text-xs font-normal text-warning">
+                                {t('headerOutstandingAdvance')}:{' '}
+                                {fmt(outstandingAdvanceByStaff.get(s.id) ?? 0, locale)} GNF
+                              </span>
+                            )}
                           </span>
                           <span className="text-sm text-muted-foreground">{s.poste}</span>
                           <EditableStaffSalaryCell
