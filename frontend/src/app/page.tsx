@@ -159,7 +159,10 @@ export default async function HomePage() {
               <h1 className="text-3xl md:text-5xl font-headings font-semibold text-primary-foreground leading-tight mb-6 whitespace-pre-line">
                 {t('hero.title')}
               </h1>
-              <p className="text-base md:text-lg text-primary-foreground leading-relaxed mb-8" style={{ opacity: 0.85 }}>
+              <p
+                className="text-base md:text-lg text-primary-foreground leading-relaxed mb-8"
+                style={{ opacity: 0.85 }}
+              >
                 {t('hero.subtitle')}
               </p>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
@@ -213,15 +216,23 @@ export default async function HomePage() {
                       <div className="w-8 h-8 bg-secondary rounded-md flex items-center justify-center mb-3">
                         <Icon i="users" size={16} className="text-primary" />
                       </div>
-                      <p className="text-xs text-muted-foreground">{t('heroPanel.studentsLabel')}</p>
-                      <p className="text-lg font-headings font-semibold text-foreground mt-0.5">312</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('heroPanel.studentsLabel')}
+                      </p>
+                      <p className="text-lg font-headings font-semibold text-foreground mt-0.5">
+                        312
+                      </p>
                     </div>
                     <div className="bg-background border border-border rounded-xl p-4">
                       <div className="w-8 h-8 bg-secondary rounded-md flex items-center justify-center mb-3">
                         <Icon i="book-open" size={16} className="text-success" />
                       </div>
-                      <p className="text-xs text-muted-foreground">{t('heroPanel.scheduleLabel')}</p>
-                      <p className="text-lg font-headings font-semibold text-foreground mt-0.5">48</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('heroPanel.scheduleLabel')}
+                      </p>
+                      <p className="text-lg font-headings font-semibold text-foreground mt-0.5">
+                        48
+                      </p>
                     </div>
                     <div className="bg-background border border-border rounded-xl p-4">
                       <div className="w-8 h-8 bg-secondary rounded-md flex items-center justify-center mb-3">
@@ -254,31 +265,11 @@ export default async function HomePage() {
         </section>
       </div>
 
-      {/* TRUSTED SCHOOLS — hidden until real, opted-in schools exist */}
-      {showTrustedSchools && (
-        <section className="px-4 py-10 md:px-8 bg-surface border-b border-border">
-          <div className="max-w-7xl mx-auto text-center">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-              {t('trustedSchools.title')}
-            </p>
-            <p className="text-sm text-muted-foreground mb-6">{t('trustedSchools.subtitle')}</p>
-            <div className="flex flex-wrap items-center justify-center gap-8">
-              {featuredSchools.map((school) => (
-                // External/opted-in logo URLs, not a local optimizable asset.
-                <img
-                  key={school.id}
-                  src={school.logoUrl!}
-                  alt={school.name}
-                  className="h-10 w-auto object-contain grayscale opacity-70"
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* FEATURES */}
-      <section id="features" className="px-4 py-16 md:px-8 md:py-24 bg-surface border-t border-border">
+      <section
+        id="features"
+        className="px-4 py-16 md:px-8 md:py-24 bg-surface border-t border-border"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 md:mb-16">
             <h2 className="text-2xl md:text-4xl font-headings font-semibold text-foreground mb-4">
@@ -324,7 +315,9 @@ export default async function HomePage() {
                 <h3 className="text-2xl font-headings font-semibold text-foreground">
                   {t('pricing.essentiel.name')}
                 </h3>
-                <p className="text-sm mt-1 text-muted-foreground">{t('pricing.essentiel.tagline')}</p>
+                <p className="text-sm mt-1 text-muted-foreground">
+                  {t('pricing.essentiel.tagline')}
+                </p>
               </div>
               <div className="mb-6 pb-6 border-b border-border">
                 <div className="flex items-end gap-2 mb-1">
@@ -363,7 +356,9 @@ export default async function HomePage() {
                 {t('pricing.mostPopular')}
               </span>
               <div className="mb-6">
-                <h3 className="text-2xl font-headings font-semibold">{t('pricing.croissance.name')}</h3>
+                <h3 className="text-2xl font-headings font-semibold">
+                  {t('pricing.croissance.name')}
+                </h3>
                 <p className="text-sm mt-1" style={{ opacity: 0.8 }}>
                   {t('pricing.croissance.tagline')}
                 </p>
@@ -383,7 +378,9 @@ export default async function HomePage() {
               </div>
               <div className="flex items-center gap-3 mb-4">
                 <Icon i="check" size={16} className="flex-shrink-0" />
-                <span className="text-sm font-semibold">{t('pricing.croissance.studentLimit')}</span>
+                <span className="text-sm font-semibold">
+                  {t('pricing.croissance.studentLimit')}
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
                 {PRICING_FEATURE_KEYS.map((key) => (
@@ -403,6 +400,47 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* TRUSTED SCHOOLS — hidden until real, opted-in schools exist. Styled
+          as an auto-scrolling logo marquee (full color, paused on hover,
+          duplicated set for a seamless loop) rather than the earlier static
+          grayscale strip, matching the "trusted by" pattern used by other
+          school-management sites. */}
+      {showTrustedSchools && (
+        <section className="px-4 py-16 md:px-8 md:py-20 bg-muted overflow-hidden">
+          <div className="max-w-7xl mx-auto text-center mb-10 md:mb-12">
+            {/* Same size/weight as the pricing H2 ("Un tarif adapté...") —
+                this section deserves the same visual weight, not a small
+                muted eyebrow label. */}
+            <h2 className="text-2xl md:text-4xl font-headings font-semibold text-foreground mb-4">
+              {t('trustedSchools.title')}
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground">
+              {t('trustedSchools.subtitle')}
+            </p>
+          </div>
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 md:w-24 bg-gradient-to-r from-muted to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 md:w-24 bg-gradient-to-l from-muted to-transparent" />
+            <div className="flex w-max gap-6 animate-scroll-logos hover:[animation-play-state:paused] motion-reduce:animate-none md:gap-8">
+              {[...featuredSchools, ...featuredSchools].map((school, i) => (
+                <div
+                  key={`${school.id}-${i}`}
+                  aria-hidden={i >= featuredSchools.length}
+                  className="flex min-w-[190px] shrink-0 items-center justify-center rounded-xl border border-border bg-surface px-7 py-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:min-w-[230px]"
+                >
+                  {/* External/opted-in logo URLs, not a local optimizable asset. */}
+                  <img
+                    src={school.logoUrl!}
+                    alt={school.name}
+                    className="h-16 w-auto max-w-[170px] object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA FINAL */}
       <section className="px-4 py-16 md:px-8 md:py-20 bg-primary text-primary-foreground">

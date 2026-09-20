@@ -48,6 +48,20 @@
   --text-2xl: 22px;
   --text-3xl: 28px;
   --text-4xl: 36px;
+
+  /* Homepage "trusted by" logo marquee (src/app/page.tsx) — the track
+     renders the logo list twice back to back, so scrolling exactly 50% of
+     its own width loops seamlessly back to the start. */
+  --animate-scroll-logos: scroll-logos 28s linear infinite;
+}
+
+@keyframes scroll-logos {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 /* Tailwind's preflight resets <button> to cursor: default (its assumption is
