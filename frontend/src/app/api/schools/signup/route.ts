@@ -42,7 +42,7 @@ import { isPwned } from '@/lib/server/auth/hibp';
 import { PASSWORD_MIN, meetsPasswordComplexity } from '@/lib/server/auth/password-policy';
 import { createEmailLimiter } from '@/lib/server/middleware/rate-limit-by-email';
 import { getRedis } from '@/lib/server/redis';
-import { prisma } from '@/lib/server/prisma';
+import { prisma, scopedPrisma } from '@/lib/server/prisma';
 import { MENU_KEYS } from '@/lib/server/permissions/menu-keys';
 import { PLAN_CROISSANCE, isSchoolPlan } from '@/lib/server/billing/constants';
 import { slugify } from '@/lib/server/school-slug';
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       slug = `${baseSlug}-${suffix}`;
     }
 
-    const { user } = await prisma.$transaction(async (tx) => {
+    const { school, user } = await prisma.$transaction(async (tx) => {
       const school = await tx.school.create({
         data: {
           name: schoolName,
@@ -163,16 +163,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           plan,
           trialEndsAt,
         },
-      });
-      // Every new school starts with the 3 standard grading cycles (see
-      // Cycle model / scripts/backfill-cycles.ts) so the admin can create
-      // classes right away without a separate setup step.
-      await tx.cycle.createMany({
-        data: [
-          { schoolId: school.id, name: 'Primaire', noteMax: 10, order: 1 },
-          { schoolId: school.id, name: 'Secondaire', noteMax: 20, order: 2 },
-          { schoolId: school.id, name: 'Universitaire', noteMax: 10, order: 3 },
-        ],
       });
       const user = await tx.user.create({
         data: {
@@ -187,6 +177,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         select: { id: true, email: true, tokenVersion: true },
       });
       return { school, user };
+    });
+
+    // Every new school starts with the 3 standard grading cycles (see Cycle
+    // model / scripts/backfill-cycles.ts) so the admin can create classes
+    // right away without a separate setup step. Done after the transaction
+    // (not inside it): Cycle is tenant-scoped, and the school's id — needed
+    // to get a schoolId-bound client via scopedPrisma() — only exists once
+    // tx.school.create() above has actually run.
+    await scopedPrisma(school.id).cycle.createMany({
+      data: [
+        { schoolId: school.id, name: 'Primaire', noteMax: 10, order: 1 },
+        { schoolId: school.id, name: 'Secondaire', noteMax: 20, order: 2 },
+        { schoolId: school.id, name: 'Universitaire', noteMax: 10, order: 3 },
+      ],
     });
 
     const accessToken = await createAccessToken({
