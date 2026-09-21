@@ -24,6 +24,18 @@ export interface CycleOption {
   noteMax: number;
 }
 
+// Maps the stable `error` codes /api/classes{,/[id]} can return to the
+// matching translation key in `classes.form`, so a server error always
+// reads in the app's current language instead of leaking the raw English
+// string the route returns. VALIDATION_FAILED isn't mapped: the form
+// already validates name/cycle client-side, so it falls back to err.message
+// like any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  CYCLE_NOT_FOUND: 'errorCycleNotFound',
+  CLASS_NOT_FOUND: 'errorClassNotFound',
+  CLASS_ALREADY_EXISTS: 'errorClassAlreadyExists',
+};
+
 export default function AddClassForm({
   classId,
   initialData,
@@ -81,7 +93,12 @@ export default function AddClassForm({
       }
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

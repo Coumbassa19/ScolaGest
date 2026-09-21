@@ -9,6 +9,16 @@ import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 
+// Maps the stable `error` codes /api/bulletin-remarks can return to the
+// matching translation key in `bulletin`, so a server error always reads
+// in the app's current language instead of leaking the raw string the
+// route returns. VALIDATION_FAILED isn't mapped: studentId/periode come
+// from props, not user input, so it isn't a case a user can realistically
+// hit and falls back to err.message like any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  STUDENT_NOT_FOUND: 'observationErrorStudentNotFound',
+};
+
 export default function BulletinObservation({
   studentId,
   periode,
@@ -39,7 +49,12 @@ export default function BulletinObservation({
       lastSavedRef.current = trimmed;
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('observationErrorNetwork'));
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        setError(key ? t(key as never) : err.message);
+      } else {
+        setError(t('observationErrorNetwork'));
+      }
     } finally {
       setSaving(false);
     }

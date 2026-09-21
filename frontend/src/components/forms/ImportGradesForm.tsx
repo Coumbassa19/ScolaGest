@@ -32,6 +32,20 @@ interface ImportResult {
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm';
 
+// Maps the stable `error` codes /api/grades/import can return to the
+// matching translation key in `grades.importForm`, so a server error always
+// reads in the app's current language instead of leaking the raw string
+// the route returns. VALIDATION_FAILED isn't mapped: the form already
+// requires a class and a file before submit, so it falls back to
+// err.message like any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  FORBIDDEN: 'errorForbidden',
+  FILE_TOO_LARGE: 'errorFileTooLarge',
+  CLASS_NOT_FOUND: 'errorClassNotFound',
+  INVALID_FILE: 'errorInvalidFile',
+  NO_VALID_ROWS: 'errorNoValidRows',
+};
+
 export default function ImportGradesForm({
   classes,
   academicYears,
@@ -89,7 +103,12 @@ export default function ImportGradesForm({
       if (fileInputRef.current) fileInputRef.current.value = '';
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -166,7 +185,9 @@ export default function ImportGradesForm({
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">{t('classLabel')}</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                {t('classLabel')}
+              </label>
               {classes.length === 0 ? (
                 <p className="text-sm text-danger">{t('noClasses')}</p>
               ) : (
@@ -185,7 +206,9 @@ export default function ImportGradesForm({
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">{t('periodLabel')}</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                {t('periodLabel')}
+              </label>
               <select
                 value={periode}
                 onChange={(e) => setPeriode(e.target.value)}

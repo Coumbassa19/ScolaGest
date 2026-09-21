@@ -17,6 +17,17 @@ export interface CycleInitialData {
   order: number;
 }
 
+// Maps the stable `error` codes /api/cycles{,/[id]} can return to the
+// matching translation key in `cycles.form`, so a server error always reads
+// in the app's current language instead of leaking the raw English string
+// the route returns. VALIDATION_FAILED isn't mapped: the form already
+// validates name/noteMax client-side, so it falls back to err.message like
+// any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  CYCLE_ALREADY_EXISTS: 'errorCycleAlreadyExists',
+  CYCLE_NOT_FOUND: 'errorCycleNotFound',
+};
+
 export default function AddCycleForm({
   cycleId,
   initialData,
@@ -73,7 +84,12 @@ export default function AddCycleForm({
       }
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

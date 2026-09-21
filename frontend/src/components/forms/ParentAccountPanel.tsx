@@ -18,6 +18,19 @@ type Relation = (typeof RELATIONS)[number];
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm placeholder-muted-foreground';
 
+// Maps the stable `error` codes the backend returns (POST/DELETE
+// /api/students/[id]/parents, PATCH /api/parents/[id]) to the matching
+// translation key in `students.detail.parentAccounts` — same pattern as
+// TeacherPaymentForm's FORM_ERROR_KEYS. `err.message` is only ever an
+// English fallback string from the API and must never be shown directly.
+const ERROR_KEYS: Record<string, string> = {
+  EMAIL_TAKEN: 'errorEmailTaken',
+  PARENT_NOT_FOUND: 'errorParentNotFound',
+  STUDENT_NOT_FOUND: 'errorStudentNotFound',
+  ALREADY_LINKED: 'errorAlreadyLinked',
+  LINK_NOT_FOUND: 'errorLinkNotFound',
+};
+
 export interface ParentLink {
   id: string;
   relation: string;
@@ -55,6 +68,14 @@ export default function ParentAccountPanel({
   const t = useTranslations('students.detail.parentAccounts');
   const tCommon = useTranslations('common');
   const { toast } = useToast();
+
+  function describeError(err: unknown): string {
+    if (err instanceof ApiError) {
+      const key = ERROR_KEYS[err.code];
+      return key ? t(key as never) : err.message;
+    }
+    return tCommon('networkError');
+  }
 
   const [links, setLinks] = useState<ParentLink[]>(initialLinks);
   const [formOpen, setFormOpen] = useState(false);
@@ -138,7 +159,7 @@ export default function ParentAccountPanel({
         setFormOpen(false);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : tCommon('networkError'));
+      setError(describeError(err));
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +172,7 @@ export default function ParentAccountPanel({
       setLinks((prev) => prev.filter((l) => l.parentUser.id !== parentUserId));
       toast(t('unlinkedToast'), 'success');
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : tCommon('networkError'), 'error');
+      toast(describeError(err), 'error');
     }
   }
 
@@ -193,7 +214,7 @@ export default function ParentAccountPanel({
         toast(t('emailUpdatedToast'), 'success');
       }
     } catch (err) {
-      setEditError(err instanceof ApiError ? err.message : tCommon('networkError'));
+      setEditError(describeError(err));
     } finally {
       setEditSubmitting(false);
     }

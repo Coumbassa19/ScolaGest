@@ -20,6 +20,7 @@ export default function AdvanceStatusToggle({
 }) {
   const router = useRouter();
   const t = useTranslations('accounting.salaryAdvances.list');
+  const tForm = useTranslations('accounting.salaryAdvances.form');
   const tCommon = useTranslations('common');
   const { toast } = useToast();
   const [pending, setPending] = useState(false);
@@ -34,7 +35,11 @@ export default function AdvanceStatusToggle({
       });
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : tCommon('networkError'), 'error');
+      let message = tCommon('networkError');
+      if (err instanceof ApiError) {
+        message = err.code === 'ADVANCE_NOT_FOUND' ? tForm('errorAdvanceNotFound') : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setPending(false);
     }

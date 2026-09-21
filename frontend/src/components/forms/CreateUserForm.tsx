@@ -37,6 +37,21 @@ interface CreateUserResponse {
   setupUrl: string;
 }
 
+// Maps the stable `error` codes POST /api/admin/users returns to the
+// matching translation key in `settings.users.new` — `err.message` is only
+// ever an English fallback string from the API and must never be shown
+// directly.
+const ERROR_KEYS: Record<string, string> = {
+  EMAIL_TAKEN: 'errorEmailTaken',
+  TEACHER_NOT_FOUND: 'errorTeacherNotFound',
+  TEACHER_ALREADY_LINKED: 'errorTeacherAlreadyLinked',
+  STAFF_NOT_FOUND: 'errorStaffNotFound',
+  STAFF_ALREADY_LINKED: 'errorStaffAlreadyLinked',
+  SUPERADMIN_REQUIRED: 'errorSuperadminRequired',
+  TEACHER_ID_REQUIRED: 'errorTeacherRequired',
+  STAFF_ID_REQUIRED: 'errorStaffRequired',
+};
+
 // The 10 school-domain menus map 1:1 onto Sidebar.tsx's navItems — reuse
 // its translation keys (namespace 'sidebar') instead of duplicating labels.
 const MENU_LABEL_KEY: Record<MenuKey, string> = {
@@ -71,6 +86,7 @@ export default function CreateUserForm({
   const t = useTranslations('settings.users.new');
   const tSidebar = useTranslations('sidebar');
   const tUsers = useTranslations('settings.users');
+  const tCommon = useTranslations('common');
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -121,7 +137,12 @@ export default function CreateUserForm({
       const res = await api<CreateUserResponse>('/api/admin/users', { method: 'POST', body });
       setResult(res);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('submitting'));
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        setError(key ? t(key as never) : err.message);
+      } else {
+        setError(tCommon('networkError'));
+      }
     } finally {
       setSubmitting(false);
     }

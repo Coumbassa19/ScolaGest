@@ -22,6 +22,18 @@ interface StudentResult {
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-input text-foreground text-sm placeholder-muted-foreground';
 
+// Maps the stable `error` codes PATCH /api/students/[id] can return to the
+// matching translation key in `students.reregister`, so a server error
+// always reads in the app's current language instead of leaking the raw
+// string the route returns. VALIDATION_FAILED and MATRICULE_ALREADY_EXISTS
+// aren't mapped: this form never sends a matricule or a date of birth, so
+// neither is reachable here — it falls back to err.message like any other
+// unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  STUDENT_NOT_FOUND: 'errorStudentNotFound',
+  CLASS_NOT_FOUND: 'errorClassNotFound',
+};
+
 export default function ReregisterStudentForm({
   classes,
   academicYears,
@@ -98,7 +110,12 @@ export default function ReregisterStudentForm({
       toast(tCommon('updatedToast'), 'success');
       router.push('/students');
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

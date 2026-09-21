@@ -54,6 +54,19 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Maps the stable `error` codes /api/absences (GET and POST) can return to
+// the matching translation key in `absences`, so a server error always
+// reads in the app's current language instead of leaking the raw string
+// the route returns. VALIDATION_FAILED isn't mapped: it's a generic
+// missing/malformed classId-date pair that the UI's own class/date pickers
+// already prevent, so it falls back to err.message like any other
+// unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  FORBIDDEN: 'errorForbidden',
+  TEACHER_NOT_LINKED: 'errorTeacherNotLinked',
+  CLASS_NOT_FOUND: 'errorClassNotFound',
+};
+
 export default function AttendanceRegister({ classes }: { classes: ClassOption[] }) {
   const t = useTranslations('absences');
   const { toast } = useToast();
@@ -85,7 +98,12 @@ export default function AttendanceRegister({ classes }: { classes: ClassOption[]
       setStatuses(nextStatuses);
       setReasons(nextReasons);
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -114,7 +132,12 @@ export default function AttendanceRegister({ classes }: { classes: ClassOption[]
       toast(t('savedToast'), 'success');
       await load();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSaving(false);
     }
@@ -183,7 +206,10 @@ export default function AttendanceRegister({ classes }: { classes: ClassOption[]
             {students.map((s) => {
               const status = statuses[s.id] ?? 'PRESENT';
               return (
-                <div key={s.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                <div
+                  key={s.id}
+                  className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2"
+                >
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-semibold text-foreground">
                       {s.nom} {s.prenom}
@@ -208,7 +234,9 @@ export default function AttendanceRegister({ classes }: { classes: ClassOption[]
                       <input
                         type="text"
                         value={reasons[s.id] ?? ''}
-                        onChange={(e) => setReasons((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                        onChange={(e) =>
+                          setReasons((prev) => ({ ...prev, [s.id]: e.target.value }))
+                        }
                         placeholder={t('reasonPlaceholder')}
                         className="border border-border rounded-md px-2 py-1.5 bg-background text-foreground text-xs w-full sm:w-40"
                       />

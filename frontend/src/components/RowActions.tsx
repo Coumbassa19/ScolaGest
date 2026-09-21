@@ -12,6 +12,25 @@ import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 
+// Maps the stable `error` codes the DELETE endpoints of the various
+// resources (classes, cycles, subjects, students, teachers) return to a
+// translated message — this component is shared across all of them, so
+// codes are grouped by meaning rather than by resource: "no longer exists"
+// (a race with another delete) is the same message regardless of resource,
+// while "has dependents" and "forbidden" get their own wording since they
+// explain a real reason the delete was refused.
+const ERROR_KEYS: Record<string, string> = {
+  CLASS_NOT_FOUND: 'deleteNotFoundError',
+  CYCLE_NOT_FOUND: 'deleteNotFoundError',
+  SUBJECT_NOT_FOUND: 'deleteNotFoundError',
+  STUDENT_NOT_FOUND: 'deleteNotFoundError',
+  TEACHER_NOT_FOUND: 'deleteNotFoundError',
+  CLASS_HAS_STUDENTS: 'classHasStudentsError',
+  CYCLE_HAS_CLASSES: 'cycleHasClassesError',
+  SUBJECT_HAS_GRADES: 'subjectHasGradesError',
+  FORBIDDEN: 'forbiddenError',
+};
+
 export default function RowActions({
   editHref,
   deleteUrl,
@@ -42,7 +61,12 @@ export default function RowActions({
       toast(t('deletedToast'), 'success');
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('networkError'), 'error');
+      let message = t('networkError');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setDeleting(false);
     }

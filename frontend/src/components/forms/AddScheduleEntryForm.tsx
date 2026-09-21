@@ -38,6 +38,17 @@ export interface ScheduleEntryInitialData {
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm';
 
+// Maps the stable `error` codes /api/schedule{,/[id]} can return to the
+// matching translation key in `schedule.form`, so a server error always
+// reads in the app's current language instead of leaking the raw English
+// string the route returns. VALIDATION_FAILED isn't mapped: the form
+// already validates class/time client-side, so it falls back to
+// err.message like any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  ENTRY_NOT_FOUND: 'errorEntryNotFound',
+  FORBIDDEN: 'errorForbidden',
+};
+
 export default function AddScheduleEntryForm({
   classes,
   subjects,
@@ -115,7 +126,12 @@ export default function AddScheduleEntryForm({
       }
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

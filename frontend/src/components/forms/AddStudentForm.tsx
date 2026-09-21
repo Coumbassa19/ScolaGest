@@ -14,6 +14,20 @@ export interface ClassOption {
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm placeholder-muted-foreground';
 
+// Maps the stable `error` codes /api/students{,/[id]} can return to the
+// matching translation key in `students.form`, so a server error always
+// reads in the app's current language instead of leaking the raw string
+// the route returns. VALIDATION_FAILED isn't mapped: the code is shared
+// between a generic "bad request body" case and the specific "invalid date
+// of birth" case, and the form already constrains the date field via the
+// native date picker, so it falls back to err.message like any other
+// unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  CLASS_NOT_FOUND: 'errorClassNotFound',
+  STUDENT_NOT_FOUND: 'errorStudentNotFound',
+  MATRICULE_ALREADY_EXISTS: 'errorMatriculeAlreadyExists',
+};
+
 export interface StudentInitialData {
   nom: string;
   prenom: string;
@@ -147,7 +161,19 @@ export default function AddStudentForm({
       }
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        if (err.code === 'PLAN_LIMIT_REACHED') {
+          const limit = err.body.limit;
+          message = t('errorPlanLimitReached', {
+            limit: typeof limit === 'number' ? limit : 0,
+          });
+        } else {
+          const key = ERROR_KEYS[err.code];
+          message = key ? t(key as never) : err.message;
+        }
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

@@ -32,6 +32,18 @@ interface TermRange {
   end: string | null;
 }
 
+// Maps the stable `error` codes /api/academic-years{,/[id]} can return to
+// the matching translation key in `settings.academicYear`, so a server
+// error always reads in the app's current language instead of leaking the
+// raw string the route returns. VALIDATION_FAILED isn't mapped: the "new
+// year" label is validated client-side via the same AAAA-AAAA regex the
+// server checks, so it falls back to err.message like any other unexpected
+// code.
+const ERROR_KEYS: Record<string, string> = {
+  YEAR_ALREADY_EXISTS: 'errorYearAlreadyExists',
+  YEAR_NOT_FOUND: 'errorYearNotFound',
+};
+
 function toDateInputValue(iso: string | null): string {
   return iso ? iso.slice(0, 10) : '';
 }
@@ -90,7 +102,12 @@ export default function AcademicYearControl() {
       await api(`/api/academic-years/${id}`, { method: 'PATCH', body: { isCurrent: true } });
       await refreshYears();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('errorNetwork'));
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        setError(key ? t(key as never) : err.message);
+      } else {
+        setError(t('errorNetwork'));
+      }
     } finally {
       setSwitching(false);
     }
@@ -114,7 +131,12 @@ export default function AcademicYearControl() {
       await refreshYears();
       toast(tCommon('savedToast'), 'success');
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSwitching(false);
     }
@@ -153,7 +175,12 @@ export default function AcademicYearControl() {
       await refreshYears();
       toast(tCommon('savedToast'), 'success');
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSavingTerms(false);
     }

@@ -36,6 +36,20 @@ const PERIODE_VALUES = ['T1', 'T2', 'T3'] as const;
 
 const gridCols = { gridTemplateColumns: '2fr 1fr' };
 
+// Maps the stable `error` codes POST /api/grades can return to the matching
+// translation key in `grades.enterForm`, so a server error always reads in
+// the app's current language instead of leaking the raw string the route
+// returns. VALIDATION_FAILED isn't mapped: the code is shared between a
+// generic "bad request body" case and the specific "grade out of range"
+// case, and the form already validates the grade range client-side using
+// the same noteMax the server checks, so it falls back to err.message like
+// any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  NOT_FOUND: 'errorNotFound',
+  FORBIDDEN: 'errorForbidden',
+  TEACHER_NOT_LINKED: 'errorTeacherNotLinked',
+};
+
 export default function EnterGradesForm({
   classes,
   subjects,
@@ -144,7 +158,12 @@ export default function EnterGradesForm({
       const params = new URLSearchParams({ classId, periode, anneeScolaire });
       router.push(`/grades?${params.toString()}`);
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

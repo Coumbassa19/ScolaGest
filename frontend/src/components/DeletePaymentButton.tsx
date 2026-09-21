@@ -7,7 +7,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
+
+// Maps the stable `error` codes the DELETE endpoints of the various payment
+// resources (teacher-payments, salary-advances, staff-payments, expenses,
+// tuition, registration) return to a translated message — this button is
+// shared across all of them, so the only code that's ever meaningful here is
+// "record no longer exists" (a race with another delete), same wording for
+// every resource.
+const ERROR_KEYS: Record<string, string> = {
+  PAYMENT_NOT_FOUND: 'deleteNotFoundError',
+  ADVANCE_NOT_FOUND: 'deleteNotFoundError',
+  EXPENSE_NOT_FOUND: 'deleteNotFoundError',
+};
 
 export default function DeletePaymentButton({
   deleteUrl,
@@ -16,6 +29,7 @@ export default function DeletePaymentButton({
   deleteUrl: string;
   confirmMessage: string;
 }) {
+  const t = useTranslations('common');
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +42,12 @@ export default function DeletePaymentButton({
       await api(deleteUrl, { method: 'DELETE' });
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Erreur réseau. Réessaie.');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        setError(key ? t(key as never) : err.message);
+      } else {
+        setError(t('networkError'));
+      }
     } finally {
       setDeleting(false);
     }

@@ -23,7 +23,12 @@
     "searchPlaceholder": "Rechercher…",
     "savedToast": "Enregistré avec succès.",
     "updatedToast": "Modifications enregistrées avec succès.",
-    "deletedToast": "Supprimé avec succès."
+    "deletedToast": "Supprimé avec succès.",
+    "deleteNotFoundError": "Cet enregistrement est introuvable, il a peut-être déjà été supprimé.",
+    "classHasStudentsError": "Impossible de supprimer une classe qui a encore des élèves inscrits.",
+    "cycleHasClassesError": "Impossible de supprimer un cycle qui a encore des classes rattachées.",
+    "subjectHasGradesError": "Impossible de supprimer cette matière : des notes y sont associées.",
+    "forbiddenError": "Action non autorisée pour votre rôle."
   },
   "sidebar": {
     "dashboard": "Tableau de bord",
@@ -325,7 +330,10 @@
       "submitting": "Envoi en cours…",
       "success": "Merci ! Votre demande a bien été envoyée, nous vous recontacterons rapidement.",
       "errorRequired": "Merci d'indiquer ton nom et ton numéro WhatsApp.",
-      "errorNetwork": "Erreur réseau. Réessaie."
+      "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorUnavailable": "Les demandes de démo sont momentanément indisponibles. Réessaie plus tard.",
+      "errorSendFailed": "Impossible d'envoyer la demande. Réessaie.",
+      "errorTooMany": "Trop de demandes envoyées. Réessaie plus tard."
     },
     "trustedSchools": {
       "title": "Ils nous font confiance",
@@ -429,7 +437,9 @@
       "create": "Créer",
       "cancel": "Annuler",
       "formatHint": "Format attendu : AAAA-AAAA (ex. 2026-2027)",
-      "errorNetwork": "Erreur réseau. Réessaie."
+      "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorYearAlreadyExists": "Cette année scolaire existe déjà.",
+      "errorYearNotFound": "Cette année scolaire est introuvable. Elle a peut-être été supprimée."
     },
     "calendar": {
       "title": "Calendrier académique",
@@ -497,6 +507,12 @@
         "submit": "Créer et envoyer l'invitation",
         "errorTeacherRequired": "Sélectionne un professeur pour ce compte enseignant.",
         "errorStaffRequired": "Sélectionne un membre du personnel pour ce compte.",
+        "errorEmailTaken": "Cette adresse email est déjà utilisée.",
+        "errorTeacherNotFound": "Professeur introuvable.",
+        "errorTeacherAlreadyLinked": "Ce professeur a déjà un compte.",
+        "errorStaffNotFound": "Membre du personnel introuvable.",
+        "errorStaffAlreadyLinked": "Ce membre du personnel a déjà un compte.",
+        "errorSuperadminRequired": "Seul un super-administrateur peut créer ce type de compte.",
         "successTitle": "Compte créé",
         "successEmailSent": "Un email d'invitation a été envoyé à {email}.",
         "successEmailFailed": "Le compte a été créé, mais l'email d'invitation n'a pas pu être envoyé ({reason}). Tu peux réessayer depuis la liste.",
@@ -612,6 +628,11 @@
         "searchPlaceholder": "Nom ou email…",
         "searchButton": "Rechercher",
         "errorSelectParent": "Sélectionne un parent dans les résultats.",
+        "errorEmailTaken": "Cette adresse email est déjà utilisée.",
+        "errorParentNotFound": "Compte parent introuvable.",
+        "errorStudentNotFound": "Élève introuvable.",
+        "errorAlreadyLinked": "Ce parent a déjà accès à cet élève.",
+        "errorLinkNotFound": "Ce parent n'est pas lié à cet élève.",
         "submit": "Enregistrer",
         "successEmailSent": "Un email a été envoyé à {email} pour créer son mot de passe.",
         "setupLinkLabel": "Lien de création du compte",
@@ -644,6 +665,8 @@
       "errorSelectClass": "Sélectionne une nouvelle classe.",
       "errorSameYear": "Cet élève est déjà inscrit pour l'année {year}. Choisis une nouvelle année scolaire, ou modifie sa classe actuelle depuis la fiche élève.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorStudentNotFound": "Cet élève est introuvable. Il a peut-être été supprimé.",
+      "errorClassNotFound": "Cette classe est introuvable. Elle a peut-être été supprimée.",
       "cancel": "Annuler",
       "submitting": "Enregistrement…",
       "submit": "Réinscrire"
@@ -667,6 +690,10 @@
       "errorSelectClass": "Sélectionnez une classe.",
       "errorSelectFile": "Choisis un fichier Excel (.xlsx) ou CSV à importer.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorFileTooLarge": "Fichier trop volumineux (max 5 Mo).",
+      "errorClassNotFound": "Cette classe est introuvable. Elle a peut-être été supprimée.",
+      "errorInvalidFile": "Fichier illisible — vérifie qu'il s'agit bien d'un fichier Excel (.xlsx) ou CSV.",
+      "errorNoValidRows": "Aucune ligne valide trouvée dans le fichier.",
       "importedSummary": "{imported, plural, one {# élève importé} other {# élèves importés}} sur {total}.",
       "warningsSummary": "{count, plural, one {# avertissement} other {# avertissements}} :",
       "rowLabel": "Ligne {row} : {message}",
@@ -715,6 +742,10 @@
       "errorInvalidPhotoType": "Choisis un fichier image (JPG, PNG…).",
       "errorPhotoTooLarge": "Image trop lourde (max 500 Ko). Choisis une photo plus légère.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorClassNotFound": "Cette classe est introuvable. Elle a peut-être été supprimée.",
+      "errorPlanLimitReached": "Le forfait actuel est limité à {limit} élèves. Passez au forfait Croissance pour inscrire plus d'élèves.",
+      "errorStudentNotFound": "Cet élève est introuvable. Il a peut-être été supprimé.",
+      "errorMatriculeAlreadyExists": "Ce matricule est déjà utilisé.",
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
@@ -766,6 +797,7 @@
       "phonePlaceholder": "ex. 621 234 567",
       "errorNameRequired": "Le nom et le prénom sont obligatoires.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorTeacherNotFound": "Cet enseignant est introuvable. Il a peut-être été supprimé.",
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
@@ -802,6 +834,9 @@
       "errorNameRequired": "Le nom de la classe est obligatoire.",
       "errorCycleRequired": "Sélectionne un cycle.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorCycleNotFound": "Ce cycle est introuvable. Il a peut-être été supprimé.",
+      "errorClassNotFound": "Cette classe est introuvable. Elle a peut-être été supprimée.",
+      "errorClassAlreadyExists": "Une classe porte déjà ce nom.",
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
@@ -837,6 +872,8 @@
       "errorNameRequired": "Le nom du cycle est obligatoire.",
       "errorNoteMaxInvalid": "Le barème doit être un nombre entier d'au moins 1.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorCycleAlreadyExists": "Un cycle porte déjà ce nom.",
+      "errorCycleNotFound": "Ce cycle est introuvable. Il a peut-être été supprimé.",
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
@@ -886,6 +923,8 @@
       "errorClassRequired": "Sélectionnez une classe.",
       "errorEndBeforeStart": "L'heure de fin doit être après l'heure de début.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorEntryNotFound": "Ce créneau est introuvable. Il a peut-être été supprimé.",
+      "errorForbidden": "Action non autorisée pour votre rôle.",
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
@@ -949,6 +988,9 @@
       "errorAtLeastOneGrade": "Saisis au moins une note.",
       "errorGradeRange": "Les notes doivent être des nombres entre 0 et {max}.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorNotFound": "Classe ou matière introuvable.",
+      "errorForbidden": "Cette classe ou matière ne t'est pas accessible.",
+      "errorTeacherNotLinked": "Aucun profil enseignant n'est relié à ce compte.",
       "success": "Notes enregistrées.",
       "back": "Retour",
       "saving": "Enregistrement…",
@@ -975,6 +1017,11 @@
       "errorSelectClass": "Sélectionnez une classe.",
       "errorSelectFile": "Choisis un fichier Excel (.xlsx) ou CSV à importer.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorForbidden": "Action non autorisée pour votre rôle.",
+      "errorFileTooLarge": "Fichier trop volumineux (max 5 Mo).",
+      "errorClassNotFound": "Cette classe est introuvable. Elle a peut-être été supprimée.",
+      "errorInvalidFile": "Fichier illisible — vérifie qu'il s'agit bien d'un fichier Excel (.xlsx) ou CSV.",
+      "errorNoValidRows": "Aucune ligne valide trouvée dans le fichier.",
       "importedSummary": "{imported, plural, one {# note importée} other {# notes importées}} sur {total}.",
       "warningsSummary": "{count, plural, one {# avertissement} other {# avertissements}} :",
       "rowLabel": "Ligne {row} : {message}",
@@ -1029,7 +1076,8 @@
     "observationPlaceholder": "Saisir l'observation du conseil de classe…",
     "observationSaving": "Enregistrement…",
     "observationSaved": "Enregistré.",
-    "observationErrorNetwork": "Erreur réseau. Réessaie."
+    "observationErrorNetwork": "Erreur réseau. Réessaie.",
+    "observationErrorStudentNotFound": "Cet élève est introuvable. Il a peut-être été supprimé."
   },
   "accounting": {
     "common": {
@@ -1191,7 +1239,8 @@
         "amountHeader": "Montant annuel (GNF)",
         "notSetPlaceholder": "Non défini",
         "saved": "Enregistré",
-        "invalidAmount": "Montant invalide."
+        "invalidAmount": "Montant invalide.",
+        "errorClassNotFound": "Cette classe est introuvable. Elle a peut-être été supprimée."
       }
     },
     "teacherPayments": {
@@ -1240,6 +1289,7 @@
       "salaryCell": {
         "placeholder": "— saisir",
         "invalidAmount": "Montant invalide.",
+        "errorTeacherNotFound": "Cet enseignant est introuvable. Il a peut-être été supprimé.",
         "ok": "OK"
       }
     },
@@ -1302,7 +1352,8 @@
         "errorStaffNotFound": "Membre du personnel introuvable. Il a peut-être été supprimé — actualisez la page."
       },
       "salaryCell": {
-        "invalidAmount": "Montant invalide."
+        "invalidAmount": "Montant invalide.",
+        "errorStaffNotFound": "Ce membre du personnel est introuvable. Il a peut-être été supprimé."
       }
     },
     "expenses": {
@@ -1344,6 +1395,7 @@
         "receiptHint": "Photo ou scan du reçu — JPG ou PNG, 500 Ko maximum.",
         "errorReceiptTooLarge": "Image trop lourde (max 500 Ko). Choisis une image plus légère.",
         "errorDescriptionRequired": "La description est obligatoire.",
+        "errorExpenseNotFound": "Dépense introuvable. Elle a peut-être été supprimée — actualise la page.",
         "savedToast": "Dépense enregistrée avec succès."
       },
       "categories": {
@@ -1689,6 +1741,9 @@
       "infoBody": "La matière sera immédiatement disponible pour la planification des emplois du temps et la saisie des notes.",
       "errorRequired": "Le nom et le code de la matière sont obligatoires.",
       "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorForbidden": "Action non autorisée pour votre rôle.",
+      "errorCodeTaken": "Ce code matière existe déjà.",
+      "errorSubjectNotFound": "Cette matière est introuvable. Elle a peut-être été supprimée.",
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
@@ -1710,6 +1765,9 @@
     "saving": "Enregistrement…",
     "savedToast": "Appel enregistré.",
     "errorNetwork": "Erreur réseau. Réessaie.",
+    "errorForbidden": "Cette classe ne t'est pas accessible.",
+    "errorTeacherNotLinked": "Aucun profil enseignant n'est relié à ce compte.",
+    "errorClassNotFound": "Cette classe est introuvable. Elle a peut-être été supprimée.",
     "recentTitle": "Absences récentes (7 derniers jours)",
     "status": {
       "PRESENT": "Présent",

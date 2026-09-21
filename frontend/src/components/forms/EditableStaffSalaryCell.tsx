@@ -12,6 +12,14 @@ import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 
+// Maps the stable `error` codes PATCH /api/staff/[id] can return to the
+// matching translation key in `accounting.staffPayments.salaryCell`, so a
+// server error always reads in the app's current language instead of
+// leaking the raw string the route returns.
+const ERROR_KEYS: Record<string, string> = {
+  STAFF_NOT_FOUND: 'errorStaffNotFound',
+};
+
 export default function EditableStaffSalaryCell({
   staffId,
   salaireMensuel,
@@ -45,7 +53,12 @@ export default function EditableStaffSalaryCell({
       toast(tCommon('savedToast'), 'success');
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : tCommon('networkError'), 'error');
+      let message = tCommon('networkError');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSaving(false);
     }

@@ -16,6 +16,16 @@ export interface TeacherInitialData {
   telephone: string;
 }
 
+// Maps the stable `error` codes /api/teachers/[id] can return to the
+// matching translation key in `teachers.form`, so a server error always
+// reads in the app's current language instead of leaking the raw string
+// the route returns. VALIDATION_FAILED isn't mapped: the form already
+// validates name client-side, so it falls back to err.message like any
+// other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  TEACHER_NOT_FOUND: 'errorTeacherNotFound',
+};
+
 export default function AddTeacherForm({
   teacherId,
   initialData,
@@ -62,7 +72,12 @@ export default function AddTeacherForm({
       }
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

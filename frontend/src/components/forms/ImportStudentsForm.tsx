@@ -26,6 +26,19 @@ interface ImportResult {
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm';
 
+// Maps the stable `error` codes /api/students/import can return to the
+// matching translation key in `students.importForm`, so a server error
+// always reads in the app's current language instead of leaking the raw
+// string the route returns. VALIDATION_FAILED isn't mapped: the form
+// already requires a class and a file before submit, so it falls back to
+// err.message like any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  FILE_TOO_LARGE: 'errorFileTooLarge',
+  CLASS_NOT_FOUND: 'errorClassNotFound',
+  INVALID_FILE: 'errorInvalidFile',
+  NO_VALID_ROWS: 'errorNoValidRows',
+};
+
 export default function ImportStudentsForm({
   classes,
   academicYears,
@@ -77,7 +90,12 @@ export default function ImportStudentsForm({
       if (fileInputRef.current) fileInputRef.current.value = '';
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

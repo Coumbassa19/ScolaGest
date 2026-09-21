@@ -156,7 +156,11 @@ export default function ExpenseForm({
       }
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : tCommon('networkError'), 'error');
+      let message = tCommon('networkError');
+      if (err instanceof ApiError) {
+        message = err.code === 'EXPENSE_NOT_FOUND' ? t('errorExpenseNotFound') : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

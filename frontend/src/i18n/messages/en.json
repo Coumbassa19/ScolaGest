@@ -23,7 +23,12 @@
     "searchPlaceholder": "Search…",
     "savedToast": "Saved successfully.",
     "updatedToast": "Changes saved successfully.",
-    "deletedToast": "Deleted successfully."
+    "deletedToast": "Deleted successfully.",
+    "deleteNotFoundError": "This record could not be found — it may already have been deleted.",
+    "classHasStudentsError": "This class still has students enrolled and cannot be deleted.",
+    "cycleHasClassesError": "This cycle still has classes attached and cannot be deleted.",
+    "subjectHasGradesError": "This subject has grades associated with it and cannot be deleted.",
+    "forbiddenError": "This action isn't allowed for your role."
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -339,7 +344,10 @@
       "submitting": "Sending…",
       "success": "Thanks! Your request has been sent, we'll get back to you shortly.",
       "errorRequired": "Please enter your name and WhatsApp number.",
-      "errorNetwork": "Network error. Please try again."
+      "errorNetwork": "Network error. Please try again.",
+      "errorUnavailable": "Demo requests are temporarily unavailable. Please try again later.",
+      "errorSendFailed": "Could not send your request. Please try again.",
+      "errorTooMany": "Too many requests sent. Please try again later."
     },
     "trustedSchools": {
       "title": "Trusted by",
@@ -443,7 +451,9 @@
       "create": "Create",
       "cancel": "Cancel",
       "formatHint": "Expected format: YYYY-YYYY (e.g. 2026-2027)",
-      "errorNetwork": "Network error. Please try again."
+      "errorNetwork": "Network error. Please try again.",
+      "errorYearAlreadyExists": "This academic year already exists.",
+      "errorYearNotFound": "This academic year could not be found. It may have been deleted."
     },
     "calendar": {
       "title": "Academic Calendar",
@@ -511,6 +521,12 @@
         "submit": "Create and send invitation",
         "errorTeacherRequired": "Select a teacher for this teacher account.",
         "errorStaffRequired": "Select a staff member for this account.",
+        "errorEmailTaken": "This email address is already in use.",
+        "errorTeacherNotFound": "Teacher not found.",
+        "errorTeacherAlreadyLinked": "This teacher already has an account.",
+        "errorStaffNotFound": "Staff member not found.",
+        "errorStaffAlreadyLinked": "This staff member already has an account.",
+        "errorSuperadminRequired": "Only a super-administrator can create this type of account.",
         "successTitle": "Account created",
         "successEmailSent": "An invitation email was sent to {email}.",
         "successEmailFailed": "The account was created, but the invitation email could not be sent ({reason}). You can retry from the list.",
@@ -626,6 +642,11 @@
         "searchPlaceholder": "Name or email…",
         "searchButton": "Search",
         "errorSelectParent": "Select a parent from the results.",
+        "errorEmailTaken": "This email address is already in use.",
+        "errorParentNotFound": "Parent account not found.",
+        "errorStudentNotFound": "Student not found.",
+        "errorAlreadyLinked": "This parent already has access to this student.",
+        "errorLinkNotFound": "This parent is not linked to this student.",
         "submit": "Save",
         "successEmailSent": "An email was sent to {email} to set their password.",
         "setupLinkLabel": "Account setup link",
@@ -658,6 +679,8 @@
       "errorSelectClass": "Select a new class.",
       "errorSameYear": "This student is already enrolled for {year}. Choose a new academic year, or edit their current class from the student record.",
       "errorNetwork": "Network error. Please try again.",
+      "errorStudentNotFound": "This student could not be found. They may have been deleted.",
+      "errorClassNotFound": "This class could not be found. It may have been deleted.",
       "cancel": "Cancel",
       "submitting": "Saving…",
       "submit": "Re-enrol"
@@ -681,6 +704,10 @@
       "errorSelectClass": "Select a class.",
       "errorSelectFile": "Choose an Excel (.xlsx) or CSV file to import.",
       "errorNetwork": "Network error. Please try again.",
+      "errorFileTooLarge": "File too large (5 MB maximum).",
+      "errorClassNotFound": "This class could not be found. It may have been deleted.",
+      "errorInvalidFile": "Unreadable file — check that it's a valid Excel (.xlsx) or CSV file.",
+      "errorNoValidRows": "No valid rows found in the file.",
       "importedSummary": "{imported, plural, one {# student imported} other {# students imported}} out of {total}.",
       "warningsSummary": "{count, plural, one {# warning} other {# warnings}}:",
       "rowLabel": "Row {row}: {message}",
@@ -729,6 +756,10 @@
       "errorInvalidPhotoType": "Choose an image file (JPG, PNG…).",
       "errorPhotoTooLarge": "Image too large (500 KB maximum). Choose a lighter photo.",
       "errorNetwork": "Network error. Please try again.",
+      "errorClassNotFound": "This class could not be found. It may have been deleted.",
+      "errorPlanLimitReached": "Your current plan is limited to {limit} students. Upgrade to the Croissance plan to enroll more.",
+      "errorStudentNotFound": "This student could not be found. They may have been deleted.",
+      "errorMatriculeAlreadyExists": "This ID number is already in use.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
@@ -780,6 +811,7 @@
       "phonePlaceholder": "e.g. 621 234 567",
       "errorNameRequired": "Surname and first name are required.",
       "errorNetwork": "Network error. Please try again.",
+      "errorTeacherNotFound": "This teacher could not be found. They may have been deleted.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
@@ -816,6 +848,9 @@
       "errorNameRequired": "The class name is required.",
       "errorCycleRequired": "Select a cycle.",
       "errorNetwork": "Network error. Please try again.",
+      "errorCycleNotFound": "This cycle could not be found. It may have been deleted.",
+      "errorClassNotFound": "This class could not be found. It may have been deleted.",
+      "errorClassAlreadyExists": "A class with this name already exists.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
@@ -851,6 +886,8 @@
       "errorNameRequired": "The cycle name is required.",
       "errorNoteMaxInvalid": "The grading scale must be a whole number of at least 1.",
       "errorNetwork": "Network error. Please try again.",
+      "errorCycleAlreadyExists": "A cycle with this name already exists.",
+      "errorCycleNotFound": "This cycle could not be found. It may have been deleted.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
@@ -900,6 +937,8 @@
       "errorClassRequired": "Select a class.",
       "errorEndBeforeStart": "The end time must be after the start time.",
       "errorNetwork": "Network error. Please try again.",
+      "errorEntryNotFound": "This slot could not be found. It may have been deleted.",
+      "errorForbidden": "This action isn't allowed for your role.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
@@ -963,6 +1002,9 @@
       "errorAtLeastOneGrade": "Enter at least one grade.",
       "errorGradeRange": "Grades must be numbers between 0 and {max}.",
       "errorNetwork": "Network error. Please try again.",
+      "errorNotFound": "Class or subject not found.",
+      "errorForbidden": "This class or subject isn't accessible to you.",
+      "errorTeacherNotLinked": "No teacher profile is linked to this account.",
       "success": "Grades saved.",
       "back": "Back",
       "saving": "Saving…",
@@ -989,6 +1031,11 @@
       "errorSelectClass": "Select a class.",
       "errorSelectFile": "Choose an Excel (.xlsx) or CSV file to import.",
       "errorNetwork": "Network error. Please try again.",
+      "errorForbidden": "This action isn't allowed for your role.",
+      "errorFileTooLarge": "File too large (5 MB maximum).",
+      "errorClassNotFound": "This class could not be found. It may have been deleted.",
+      "errorInvalidFile": "Unreadable file — check that it's a valid Excel (.xlsx) or CSV file.",
+      "errorNoValidRows": "No valid rows found in the file.",
       "importedSummary": "{imported, plural, one {# grade imported} other {# grades imported}} out of {total}.",
       "warningsSummary": "{count, plural, one {# warning} other {# warnings}}:",
       "rowLabel": "Row {row}: {message}",
@@ -1043,7 +1090,8 @@
     "observationPlaceholder": "Enter the class council's remark…",
     "observationSaving": "Saving…",
     "observationSaved": "Saved.",
-    "observationErrorNetwork": "Network error. Please try again."
+    "observationErrorNetwork": "Network error. Please try again.",
+    "observationErrorStudentNotFound": "This student could not be found. They may have been deleted."
   },
   "accounting": {
     "common": {
@@ -1205,7 +1253,8 @@
         "amountHeader": "Annual Amount (GNF)",
         "notSetPlaceholder": "Not set",
         "saved": "Saved",
-        "invalidAmount": "Invalid amount."
+        "invalidAmount": "Invalid amount.",
+        "errorClassNotFound": "This class could not be found. It may have been deleted."
       }
     },
     "teacherPayments": {
@@ -1254,6 +1303,7 @@
       "salaryCell": {
         "placeholder": "— enter",
         "invalidAmount": "Invalid amount.",
+        "errorTeacherNotFound": "This teacher could not be found. They may have been deleted.",
         "ok": "OK"
       }
     },
@@ -1316,7 +1366,8 @@
         "errorStaffNotFound": "Staff member not found. They may have been removed — please refresh the page."
       },
       "salaryCell": {
-        "invalidAmount": "Invalid amount."
+        "invalidAmount": "Invalid amount.",
+        "errorStaffNotFound": "This staff member could not be found. They may have been deleted."
       }
     },
     "expenses": {
@@ -1358,6 +1409,7 @@
         "receiptHint": "Photo or scan of the receipt — JPG or PNG, 500 KB max.",
         "errorReceiptTooLarge": "Image too large (500 KB max). Choose a smaller image.",
         "errorDescriptionRequired": "Description is required.",
+        "errorExpenseNotFound": "Expense not found. It may have been deleted — refresh the page.",
         "savedToast": "Expense recorded successfully."
       },
       "categories": {
@@ -1703,6 +1755,9 @@
       "infoBody": "The subject will be immediately available for timetable scheduling and grade entry.",
       "errorRequired": "The subject name and code are required.",
       "errorNetwork": "Network error. Please try again.",
+      "errorForbidden": "This action isn't allowed for your role.",
+      "errorCodeTaken": "This subject code already exists.",
+      "errorSubjectNotFound": "This subject could not be found. It may have been deleted.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
@@ -1724,6 +1779,9 @@
     "saving": "Saving…",
     "savedToast": "Attendance saved.",
     "errorNetwork": "Network error. Please try again.",
+    "errorForbidden": "This class isn't accessible to you.",
+    "errorTeacherNotLinked": "No teacher profile is linked to this account.",
+    "errorClassNotFound": "This class could not be found. It may have been deleted.",
     "recentTitle": "Recent Absences (last 7 days)",
     "status": {
       "PRESENT": "Present",

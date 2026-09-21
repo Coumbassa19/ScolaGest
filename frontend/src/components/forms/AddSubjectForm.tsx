@@ -21,6 +21,18 @@ export interface ClassOption {
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-background text-foreground text-sm placeholder-muted-foreground';
 
+// Maps the stable `error` codes /api/subjects{,/[id]} can return to the
+// matching translation key in `subjects.form`, so a server error always
+// reads in the app's current language instead of leaking the raw string
+// the route returns. VALIDATION_FAILED isn't mapped: the form already
+// validates name/code client-side, so it falls back to err.message like
+// any other unexpected code.
+const ERROR_KEYS: Record<string, string> = {
+  FORBIDDEN: 'errorForbidden',
+  SUBJECT_CODE_TAKEN: 'errorCodeTaken',
+  SUBJECT_NOT_FOUND: 'errorSubjectNotFound',
+};
+
 export interface SubjectInitialData {
   nom: string;
   code: string;
@@ -104,7 +116,12 @@ export default function AddSubjectForm({
       }
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }

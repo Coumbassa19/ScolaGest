@@ -18,6 +18,14 @@ export interface TuitionPlanRow {
   montantAnnuel: number | null;
 }
 
+// Maps the stable `error` codes POST /api/accounting/tuition-plans can
+// return to the matching translation key in `accounting.tuition.plan`, so a
+// server error always reads in the app's current language instead of
+// leaking the raw string the route returns.
+const ERROR_KEYS: Record<string, string> = {
+  CLASS_NOT_FOUND: 'errorClassNotFound',
+};
+
 function ClassRow({ row, anneeScolaire }: { row: TuitionPlanRow; anneeScolaire: string }) {
   const t = useTranslations('accounting.tuition.plan');
   const tCommon = useTranslations('common');
@@ -52,7 +60,12 @@ function ClassRow({ row, anneeScolaire }: { row: TuitionPlanRow; anneeScolaire: 
       toast(tCommon('savedToast'), 'success');
       router.refresh();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : tCommon('networkError'), 'error');
+      let message = tCommon('networkError');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSaving(false);
     }

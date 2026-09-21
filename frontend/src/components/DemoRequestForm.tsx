@@ -13,6 +13,19 @@ import Icon from '@/components/global/Icon';
 const fieldClass =
   'w-full border border-border rounded-md px-3 py-2 bg-surface text-foreground text-sm placeholder-muted-foreground';
 
+// Maps the stable `error` codes /api/demo-requests can return to the
+// matching translation key in `homepage.demoForm`, so a server error always
+// reads in the app's current language instead of leaking the raw English
+// string the route returns. VALIDATION_FAILED isn't mapped: the form
+// already validates name/phone client-side, so it's not a case with a
+// specific known meaning and falls back to err.message like an unexpected
+// code would.
+const ERROR_KEYS: Record<string, string> = {
+  SERVICE_UNAVAILABLE: 'errorUnavailable',
+  SEND_FAILED: 'errorSendFailed',
+  TOO_MANY_DEMO_REQUESTS: 'errorTooMany',
+};
+
 export default function DemoRequestForm() {
   const t = useTranslations('homepage.demoForm');
   const { toast } = useToast();
@@ -46,7 +59,12 @@ export default function DemoRequestForm() {
       setPhone('');
       setMessage('');
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
+      let message = t('errorNetwork');
+      if (err instanceof ApiError) {
+        const key = ERROR_KEYS[err.code];
+        message = key ? t(key as never) : err.message;
+      }
+      toast(message, 'error');
     } finally {
       setSubmitting(false);
     }
