@@ -177,7 +177,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         });
       } else {
         for (let attempt = 0; attempt < 3; attempt++) {
-          const matricule = await nextMatricule(data.anneeScolaire);
+          const matricule = await nextMatricule(prisma, data.anneeScolaire);
           try {
             student = await prisma.student.create({
               data: {

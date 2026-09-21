@@ -132,7 +132,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     for (const row of rowsToImport) {
       try {
-        const matricule = row.matricule || (await nextMatricule(anneeScolaire));
+        const matricule = row.matricule || (await nextMatricule(prisma, anneeScolaire));
         await prisma.student.create({
           data: {
             schoolId,
