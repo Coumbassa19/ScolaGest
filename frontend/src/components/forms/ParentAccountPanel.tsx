@@ -32,6 +32,13 @@ interface CreateResponse {
   setupUrl?: string;
 }
 
+interface UpdateEmailResponse {
+  email: string;
+  emailStatus?: 'SENT' | 'FAILED' | 'UNAVAILABLE';
+  emailError?: string;
+  setupUrl: string | null;
+}
+
 interface ParentSearchResult {
   id: string;
   email: string;
@@ -63,6 +70,11 @@ export default function ParentAccountPanel({
   const [error, setError] = useState<string | null>(null);
   const [setupResult, setSetupResult] = useState<{ setupUrl: string; email: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   function resetForm() {
     setMode('NEW');
@@ -143,6 +155,50 @@ export default function ParentAccountPanel({
     }
   }
 
+  function startEditEmail(l: ParentLink) {
+    setEditingId(l.parentUser.id);
+    setEditEmail(l.parentUser.email);
+    setEditError(null);
+  }
+
+  function cancelEditEmail() {
+    setEditingId(null);
+    setEditError(null);
+  }
+
+  async function onSaveEmail(parentUserId: string) {
+    setEditError(null);
+    const trimmed = editEmail.trim();
+    if (!trimmed) {
+      setEditError(t('errorEmailRequired'));
+      return;
+    }
+    setEditSubmitting(true);
+    try {
+      const res = await api<UpdateEmailResponse>(`/api/parents/${parentUserId}`, {
+        method: 'PATCH',
+        body: { email: trimmed },
+      });
+      setLinks((prev) =>
+        prev.map((l) =>
+          l.parentUser.id === parentUserId
+            ? { ...l, parentUser: { ...l.parentUser, email: res.email } }
+            : l,
+        ),
+      );
+      setEditingId(null);
+      if (res.setupUrl) {
+        setSetupResult({ setupUrl: res.setupUrl, email: res.email });
+      } else {
+        toast(t('emailUpdatedToast'), 'success');
+      }
+    } catch (err) {
+      setEditError(err instanceof ApiError ? err.message : tCommon('networkError'));
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
   return (
     <div className="bg-surface rounded-lg border border-border px-4 py-5 md:px-6 md:py-6 w-full">
       <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
@@ -162,29 +218,77 @@ export default function ParentAccountPanel({
         <p className="text-sm text-muted-foreground">{t('noParents')}</p>
       ) : (
         <ul className="space-y-2 mb-4">
-          {links.map((l) => (
-            <li
-              key={l.id}
-              className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-border"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {l.parentUser.name || l.parentUser.email}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t(`relations.${l.relation as Relation}`)} · {l.parentUser.email}
-                  {l.parentUser.status === 'SUSPENDED' ? ` · ${t('suspended')}` : ''}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onUnlink(l.parentUser.id)}
-                className="text-xs font-semibold text-danger shrink-0"
+          {links.map((l) =>
+            editingId === l.parentUser.id ? (
+              <li key={l.id} className="px-3 py-2.5 rounded-md border border-primary">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                  {t('emailLabel')}
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className={fieldClass}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={cancelEditEmail}
+                      className="px-3 py-2 text-xs font-semibold text-foreground border border-border rounded-md bg-surface"
+                    >
+                      {tCommon('cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSaveEmail(l.parentUser.id)}
+                      disabled={editSubmitting}
+                      className="px-3 py-2 text-xs font-semibold text-primary-foreground bg-primary rounded-md disabled:opacity-50"
+                    >
+                      {editSubmitting ? tCommon('saving') : tCommon('save')}
+                    </button>
+                  </div>
+                </div>
+                {editError && (
+                  <p role="alert" className="text-xs text-danger mt-1.5">
+                    {editError}
+                  </p>
+                )}
+              </li>
+            ) : (
+              <li
+                key={l.id}
+                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-border"
               >
-                {t('unlink')}
-              </button>
-            </li>
-          ))}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {l.parentUser.name || l.parentUser.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t(`relations.${l.relation as Relation}`)} · {l.parentUser.email}
+                    {l.parentUser.status === 'SUSPENDED' ? ` · ${t('suspended')}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => startEditEmail(l)}
+                    className="text-xs font-semibold text-primary"
+                  >
+                    {t('edit')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUnlink(l.parentUser.id)}
+                    className="text-xs font-semibold text-danger"
+                  >
+                    {t('unlink')}
+                  </button>
+                </div>
+              </li>
+            ),
+          )}
         </ul>
       )}
 
