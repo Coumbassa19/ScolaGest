@@ -601,6 +601,7 @@
       "title": "Student Register",
       "searchPlaceholder": "Search for a student…",
       "importExcel": "Import (Excel)",
+      "exportExcel": "Export (Excel)",
       "addStudent": "+ Enrol a Student",
       "filterByClass": "Filter by class:",
       "noClasses": "No classes have been created yet.",
@@ -957,6 +958,7 @@
       "subtitle": "View and enter grades by class and term",
       "searchPlaceholder": "Search for a student…",
       "importExcel": "Import (Excel)",
+      "exportExcel": "Export (Excel)",
       "enterGrades": "+ Enter Grades",
       "classLabel": "Class:",
       "periodLabel": "Term:",
@@ -1138,9 +1140,9 @@
         "SCOLARITE": "Tuition fee"
       },
       "periods": {
-        "T1": "1st term",
-        "T2": "2nd term",
-        "T3": "3rd term",
+        "T1": "1st instalment",
+        "T2": "2nd instalment",
+        "T3": "3rd instalment",
         "ANNUEL": "Annual"
       },
       "balanceTitle": "Tuition account summary",
@@ -1219,9 +1221,9 @@
         "noPayments": "No tuition payments recorded yet.",
         "deleteConfirm": "Delete this payment?",
         "periods": {
-          "T1": "Term 1",
-          "T2": "Term 2",
-          "T3": "Term 3",
+          "T1": "Instalment 1",
+          "T2": "Instalment 2",
+          "T3": "Instalment 3",
           "ANNUEL": "Annual"
         }
       },
@@ -1232,9 +1234,9 @@
         "createTitle": "Tuition Payment",
         "dueDateLabel": "Instalment:",
         "periods": {
-          "T1": "Term 1",
-          "T2": "Term 2",
-          "T3": "Term 3",
+          "T1": "Instalment 1",
+          "T2": "Instalment 2",
+          "T3": "Instalment 3",
           "ANNUEL": "Annual (single payment)"
         },
         "amountPlaceholder": "e.g. 300000",

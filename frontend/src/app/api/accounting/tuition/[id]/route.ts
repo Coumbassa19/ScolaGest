@@ -26,9 +26,9 @@ const Body = z.object({
 });
 
 const PERIODE_LABEL: Record<string, string> = {
-  T1: '1er trimestre',
-  T2: '2ème trimestre',
-  T3: '3ème trimestre',
+  T1: '1ère tranche',
+  T2: '2ème tranche',
+  T3: '3ème tranche',
   ANNUEL: 'Annuel',
 };
 

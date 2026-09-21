@@ -210,6 +210,12 @@ export default async function GradesPage({
                   {t('importExcel')}
                 </Link>
               )}
+              <a
+                href={`/api/grades/export?classId=${classId}&periode=${periode}&anneeScolaire=${encodeURIComponent(anneeScolaire)}`}
+                className="px-4 py-2 border border-border text-foreground text-sm font-semibold rounded-md bg-surface text-center"
+              >
+                {t('exportExcel')}
+              </a>
               <Link
                 href="/enter-grades"
                 className="px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-md text-center"

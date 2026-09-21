@@ -104,7 +104,9 @@ async function ClassTable({
                   <RowActions
                     editHref={`/students/${student.id}`}
                     deleteUrl={`/api/students/${student.id}`}
-                    confirmMessage={t('confirmDelete', { name: `${student.nom} ${student.prenom}` })}
+                    confirmMessage={t('confirmDelete', {
+                      name: `${student.nom} ${student.prenom}`,
+                    })}
                   />
                 </div>
               ))
@@ -161,11 +163,7 @@ export default async function StudentsPage({
   return (
     <div className="flex flex-col md:flex-row bg-background min-h-full font-body">
       {/* Sidebar */}
-      <Sidebar
-        activeItem="students"
-        activeSubmenu="students-list"
-        expandedMenu="students"
-      />
+      <Sidebar activeItem="students" activeSubmenu="students-list" expandedMenu="students" />
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -194,6 +192,12 @@ export default async function StudentsPage({
               >
                 {t('importExcel')}
               </Link>
+              <a
+                href={`/api/students/export${classId ? `?classId=${classId}` : ''}${search ? `${classId ? '&' : '?'}search=${encodeURIComponent(search)}` : ''}`}
+                className="px-4 py-2 border border-border text-foreground text-sm font-semibold rounded-md bg-surface text-center"
+              >
+                {t('exportExcel')}
+              </a>
               <Link
                 href="/add-student"
                 className="px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-md text-center"

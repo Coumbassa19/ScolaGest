@@ -587,6 +587,7 @@
       "title": "Liste des élèves",
       "searchPlaceholder": "Rechercher un élève…",
       "importExcel": "Importer (Excel)",
+      "exportExcel": "Exporter (Excel)",
       "addStudent": "+ Inscrire un élève",
       "filterByClass": "Filtrer par classe :",
       "noClasses": "Aucune classe n'existe encore.",
@@ -943,6 +944,7 @@
       "subtitle": "Consultez et saisissez les notes par classe et par période",
       "searchPlaceholder": "Rechercher un élève…",
       "importExcel": "Importer (Excel)",
+      "exportExcel": "Exporter (Excel)",
       "enterGrades": "+ Saisir des notes",
       "classLabel": "Classe :",
       "periodLabel": "Période :",
@@ -1124,9 +1126,9 @@
         "SCOLARITE": "Frais de scolarité"
       },
       "periods": {
-        "T1": "1er trimestre",
-        "T2": "2ème trimestre",
-        "T3": "3ème trimestre",
+        "T1": "1ère tranche",
+        "T2": "2ème tranche",
+        "T3": "3ème tranche",
         "ANNUEL": "Annuel"
       },
       "balanceTitle": "Situation du compte de scolarité",
@@ -1205,9 +1207,9 @@
         "noPayments": "Aucun paiement de scolarité enregistré pour le moment.",
         "deleteConfirm": "Supprimer ce paiement ?",
         "periods": {
-          "T1": "1er trim.",
-          "T2": "2ème trim.",
-          "T3": "3ème trim.",
+          "T1": "1ère tranche",
+          "T2": "2ème tranche",
+          "T3": "3ème tranche",
           "ANNUEL": "Annuel"
         }
       },
@@ -1218,9 +1220,9 @@
         "createTitle": "Paiement de scolarité",
         "dueDateLabel": "Échéance :",
         "periods": {
-          "T1": "1er trimestre",
-          "T2": "2ème trimestre",
-          "T3": "3ème trimestre",
+          "T1": "1ère tranche",
+          "T2": "2ème tranche",
+          "T3": "3ème tranche",
           "ANNUEL": "Annuel (paiement unique)"
         },
         "amountPlaceholder": "ex. 300000",
