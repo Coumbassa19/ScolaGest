@@ -589,7 +589,7 @@ model Student {
   nom           String
   prenom        String
   dateNaissance DateTime?
-  ville         String?
+  lieuNaissance String?
   quartier      String?
   sexe          String      @default("M") // M | F
   photoUrl      String?

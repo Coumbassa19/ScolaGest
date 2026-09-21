@@ -58,7 +58,7 @@ describe('parseImportSheet', () => {
         prenom: 'Fatoumata',
         dateNaissance: '2012-03-15',
         sexe: 'F',
-        ville: 'Conakry',
+        lieuNaissance: 'Conakry',
         quartier: 'Dixinn',
         statut: 'ANCIEN',
         parentNom: 'Mamadou Diallo',

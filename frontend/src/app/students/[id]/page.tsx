@@ -71,7 +71,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               nom: student.nom,
               prenom: student.prenom,
               dateNaissance: toDateInputValue(student.dateNaissance),
-              ville: student.ville ?? '',
+              lieuNaissance: student.lieuNaissance ?? '',
               quartier: student.quartier ?? '',
               sexe: student.sexe === 'F' ? 'F' : 'M',
               classId: student.classId,

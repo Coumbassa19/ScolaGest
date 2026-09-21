@@ -32,7 +32,7 @@ export interface StudentInitialData {
   nom: string;
   prenom: string;
   dateNaissance: string; // "YYYY-MM-DD" or ""
-  ville: string;
+  lieuNaissance: string;
   quartier: string;
   sexe: 'M' | 'F';
   classId: string;
@@ -79,7 +79,7 @@ export default function AddStudentForm({
   const [nom, setNom] = useState(initialData?.nom ?? '');
   const [prenom, setPrenom] = useState(initialData?.prenom ?? '');
   const [dateNaissance, setDateNaissance] = useState(initialData?.dateNaissance ?? '');
-  const [ville, setVille] = useState(initialData?.ville ?? '');
+  const [lieuNaissance, setLieuNaissance] = useState(initialData?.lieuNaissance ?? '');
   const [quartier, setQuartier] = useState(initialData?.quartier ?? '');
   const [sexe, setSexe] = useState<'M' | 'F'>(initialData?.sexe ?? 'M');
   const [classId, setClassId] = useState(initialData?.classId ?? classes[0]?.id ?? '');
@@ -139,7 +139,7 @@ export default function AddStudentForm({
         nom: nom.trim(),
         prenom: prenom.trim(),
         dateNaissance: dateNaissance || undefined,
-        ville: ville.trim() || undefined,
+        lieuNaissance: lieuNaissance.trim() || undefined,
         quartier: quartier.trim() || undefined,
         sexe,
         classId,
@@ -257,7 +257,7 @@ export default function AddStudentForm({
             </div>
           </div>
 
-          {/* Date de naissance & Ville */}
+          {/* Date de naissance & Lieu de naissance */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
@@ -274,13 +274,13 @@ export default function AddStudentForm({
             </div>
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
-                {t('cityLabel')}
+                {t('birthPlaceLabel')}
               </label>
               <input
                 type="text"
-                value={ville}
-                onChange={(e) => setVille(e.target.value)}
-                placeholder={t('cityPlaceholder')}
+                value={lieuNaissance}
+                onChange={(e) => setLieuNaissance(e.target.value)}
+                placeholder={t('birthPlacePlaceholder')}
                 className={fieldClass}
               />
             </div>

@@ -140,7 +140,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             nom: row.nom,
             prenom: row.prenom,
             ...(row.dateNaissance ? { dateNaissance: new Date(row.dateNaissance) } : {}),
-            ...(row.ville ? { ville: row.ville } : {}),
+            ...(row.lieuNaissance ? { lieuNaissance: row.lieuNaissance } : {}),
             ...(row.quartier ? { quartier: row.quartier } : {}),
             sexe: row.sexe,
             statut: row.statut,

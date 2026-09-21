@@ -12,6 +12,7 @@ export interface StudentCardData {
   nom: string;
   prenom: string;
   dateNaissance: Date | null;
+  lieuNaissance: string | null;
   sexe: string;
   matricule: string;
   className: string;
@@ -28,6 +29,7 @@ function toCardData(
     nom: string;
     prenom: string;
     dateNaissance: Date | null;
+    lieuNaissance: string | null;
     sexe: string;
     matricule: string;
     anneeScolaire: string;
@@ -43,6 +45,7 @@ function toCardData(
     nom: student.nom,
     prenom: student.prenom,
     dateNaissance: student.dateNaissance,
+    lieuNaissance: student.lieuNaissance,
     sexe: student.sexe,
     matricule: student.matricule,
     className: student.schoolClass.name,

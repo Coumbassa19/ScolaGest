@@ -15,7 +15,7 @@ export interface ImportColumn {
     | 'prenom'
     | 'dateNaissance'
     | 'sexe'
-    | 'ville'
+    | 'lieuNaissance'
     | 'quartier'
     | 'statut'
     | 'parentNom'
@@ -58,7 +58,13 @@ export const IMPORT_COLUMNS: ImportColumn[] = [
     example: 'F',
     aliases: ['sexe', 'genre'],
   },
-  { key: 'ville', header: 'Ville', required: false, example: 'Conakry', aliases: ['ville'] },
+  {
+    key: 'lieuNaissance',
+    header: 'Lieu de naissance',
+    required: false,
+    example: 'Conakry',
+    aliases: ['lieu de naissance', 'lieu naissance', 'ville'],
+  },
   {
     key: 'quartier',
     header: 'Quartier',
@@ -111,7 +117,7 @@ export interface ParsedStudentRow {
   prenom: string;
   dateNaissance?: string | undefined; // ISO "YYYY-MM-DD"
   sexe: 'M' | 'F';
-  ville?: string | undefined;
+  lieuNaissance?: string | undefined;
   quartier?: string | undefined;
   statut: 'NOUVEAU' | 'ANCIEN';
   parentNom?: string | undefined;
@@ -276,7 +282,7 @@ export function parseImportSheet(rows: unknown[][]): {
       prenom,
       dateNaissance,
       sexe,
-      ville: cellToString(get(row, 'ville')) || undefined,
+      lieuNaissance: cellToString(get(row, 'lieuNaissance')) || undefined,
       quartier: cellToString(get(row, 'quartier')) || undefined,
       statut,
       parentNom: cellToString(get(row, 'parentNom')) || undefined,

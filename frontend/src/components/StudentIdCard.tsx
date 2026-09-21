@@ -188,14 +188,19 @@ export default async function StudentIdCard({
                 <Field label={`${t('matriculeLabel')} :`} value={data.matricule} />
                 <Field label={`${t('nameLabel')} :`} value={data.nom.toUpperCase()} />
                 <Field label={`${t('firstNameLabel')} :`} value={data.prenom} />
+                <Field
+                  label={`${t('dobLabel')} :`}
+                  value={
+                    data.dateNaissance
+                      ? `${formatCardDate(data.dateNaissance)}${data.lieuNaissance ? ` à ${data.lieuNaissance}` : ''}`
+                      : '—'
+                  }
+                  nowrap
+                />
                 <div className="flex gap-3">
-                  <Field
-                    label={`${t('dobLabel')} :`}
-                    value={data.dateNaissance ? formatCardDate(data.dateNaissance) : '—'}
-                  />
                   <Field label={`${t('sexLabel')} :`} value={sexeLabel(data.sexe)} />
+                  <Field label={`${t('classLabel')} :`} value={data.className} />
                 </div>
-                <Field label={`${t('classLabel')} :`} value={data.className} />
                 <Field label={`${t('lostCardLabel')} :`} value={data.school.phone} nowrap />
               </div>
 

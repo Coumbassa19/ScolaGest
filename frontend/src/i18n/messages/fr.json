@@ -643,7 +643,7 @@
     },
     "add": {
       "backLink": "LISTE D'ÉLÈVES",
-      "title": "Inscrire élève"
+      "title": "Inscrire un élève"
     },
     "reregister": {
       "backLink": "GESTION DES ÉLÈVES",
@@ -712,8 +712,8 @@
       "firstNameLabel": "Prénom :",
       "firstNamePlaceholder": "ex. Fatoumata",
       "dobLabel": "Date de naissance :",
-      "cityLabel": "Ville :",
-      "cityPlaceholder": "Votre réponse",
+      "birthPlaceLabel": "Lieu de naissance :",
+      "birthPlacePlaceholder": "Votre réponse",
       "districtLabel": "Quartier :",
       "districtPlaceholder": "Votre réponse",
       "sexLabel": "Sexe :",

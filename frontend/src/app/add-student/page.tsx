@@ -7,7 +7,7 @@ import AddStudentForm from '@/components/forms/AddStudentForm';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
 
 export const metadata: Metadata = {
-  title: 'Inscrire élève',
+  title: 'Inscrire un élève',
 };
 
 export default async function AddStudentPage() {
@@ -28,11 +28,7 @@ export default async function AddStudentPage() {
   return (
     <div className="flex flex-col md:flex-row bg-background min-h-full font-body">
       {/* Sidebar */}
-      <Sidebar
-        activeItem="students"
-        activeSubmenu="students-add"
-        expandedMenu="students"
-      />
+      <Sidebar activeItem="students" activeSubmenu="students-add" expandedMenu="students" />
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">

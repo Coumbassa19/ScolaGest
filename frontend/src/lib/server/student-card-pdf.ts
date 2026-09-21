@@ -253,15 +253,13 @@ function drawCard(
   ly += lineH;
   field('Prénom(s) :', data.prenom);
   ly += lineH;
-  field(
-    'Né(e) le :',
-    data.dateNaissance ? formatCardDate(data.dateNaissance) : '—',
-    colX,
-    colW / 2 + 8,
-  );
-  field('Sexe :', sexeLabel(data.sexe), colX + colW / 2 + 8, colW / 2 - 8);
+  const dobValue = data.dateNaissance
+    ? `${formatCardDate(data.dateNaissance)}${data.lieuNaissance ? ` à ${data.lieuNaissance}` : ''}`
+    : '—';
+  fieldFit('Né(e) le :', dobValue);
   ly += lineH;
-  field('Classe :', data.className);
+  field('Sexe :', sexeLabel(data.sexe), colX, colW / 2 + 8);
+  field('Classe :', data.className, colX + colW / 2 + 8, colW / 2 - 8);
   ly += lineH;
   fieldFit('Si trouvée :', data.school.phone);
 
