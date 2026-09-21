@@ -40,6 +40,33 @@ describe('createMonerooProvider — construction', () => {
     );
     fetchSpy.mockRestore();
   });
+
+  it('also defaults to https://api.moneroo.io/v1 when MONEROO_API_URL is an empty string', async () => {
+    // A Vercel env var set to "" (not unset) is `""`, not `undefined` — the
+    // fallback must catch this case too, not just a missing var.
+    const provider = createMonerooProvider({ ...env, MONEROO_API_URL: '' });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ data: { id: 'p1', checkout_url: 'https://checkout.moneroo.io/p1' } }),
+        {
+          status: 201,
+        },
+      ),
+    );
+    await provider.charge({
+      amount: 1000,
+      currency: 'GNF',
+      customer: { email: 'a@example.com' },
+      successUrl: 'https://app.test/success',
+      failureUrl: 'https://app.test/fail',
+      externalRef: 'ref1',
+    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://api.moneroo.io/v1/payments/initialize',
+      expect.anything(),
+    );
+    fetchSpy.mockRestore();
+  });
 });
 
 describe('createMonerooProvider().charge', () => {

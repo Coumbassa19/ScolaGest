@@ -121,7 +121,10 @@ export function createMonerooProvider(env: MonerooEnv): MonerooProviderHandle {
   if (!env.MONEROO_WEBHOOK_SECRET)
     throw new Error('createMonerooProvider: MONEROO_WEBHOOK_SECRET is required');
 
-  const baseUrl = (env.MONEROO_API_URL ?? 'https://api.moneroo.io/v1').replace(/\/+$/, '');
+  // `||`, not `??` — an empty string (e.g. an unset-but-defined Vercel env
+  // var) must fall back too, not just `undefined`/`null`. `??` alone let a
+  // blank MONEROO_API_URL silently produce a broken base URL in production.
+  const baseUrl = (env.MONEROO_API_URL || 'https://api.moneroo.io/v1').replace(/\/+$/, '');
 
   // ── charge ─────────────────────────────────────────────────────────
   async function charge(input: ChargeInput): Promise<ChargeResult> {
