@@ -62,6 +62,10 @@ export async function requirePageAuth(
   if (!user) redirect('/login');
   if (user.tokenVersion !== (payload.tokenVersion ?? 0)) redirect('/login');
   if (user.status === 'SUSPENDED') redirect('/login');
+  // PARENT accounts never have a staff menu (effectiveMenus falls through
+  // to [] for them below, which would otherwise read as a confusing /403)
+  // — send them straight to their actual home instead.
+  if (user.role === 'PARENT') redirect('/parent');
 
   if (user.schoolId && !opts.skipBillingGate) {
     const school = await prisma.school.findUnique({
@@ -106,9 +110,7 @@ export interface AdminPageContext {
  * managing other accounts' access is never something a menu toggle can
  * grant, only an actual ADMIN/SUPERADMIN role.
  */
-export async function requireAdminPage(
-  minRole: AdminRole = 'ADMIN',
-): Promise<AdminPageContext> {
+export async function requireAdminPage(minRole: AdminRole = 'ADMIN'): Promise<AdminPageContext> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) redirect('/login');

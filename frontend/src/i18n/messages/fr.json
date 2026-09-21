@@ -585,7 +585,37 @@
     },
     "detail": {
       "backLink": "LISTE DES ÉLÈVES",
-      "matriculeLabel": "Matricule {matricule}"
+      "matriculeLabel": "Matricule {matricule}",
+      "parentAccounts": {
+        "title": "Compte(s) parent",
+        "addButton": "+ Ajouter un parent",
+        "noParents": "Aucun compte parent lié pour le moment.",
+        "unlink": "Retirer",
+        "unlinkConfirm": "Retirer l'accès de ce parent à cet élève ?",
+        "unlinkedToast": "Accès retiré.",
+        "linkedToast": "Compte parent lié avec succès.",
+        "suspended": "suspendu",
+        "modeNew": "Nouveau compte",
+        "modeLinkExisting": "Compte existant (frère/sœur)",
+        "emailLabel": "Email",
+        "nameLabel": "Nom (optionnel)",
+        "relationLabel": "Lien de parenté",
+        "relations": {
+          "PERE": "Père",
+          "MERE": "Mère",
+          "TUTEUR": "Tuteur/Tutrice"
+        },
+        "searchLabel": "Rechercher un parent existant",
+        "searchPlaceholder": "Nom ou email…",
+        "searchButton": "Rechercher",
+        "errorSelectParent": "Sélectionne un parent dans les résultats.",
+        "submit": "Enregistrer",
+        "successEmailSent": "Un email a été envoyé à {email} pour créer son mot de passe.",
+        "setupLinkLabel": "Lien de création du compte",
+        "copyLink": "Copier le lien",
+        "copied": "Copié !",
+        "done": "Terminé"
+      }
     },
     "add": {
       "backLink": "LISTE D'ÉLÈVES",
@@ -1684,6 +1714,35 @@
       "LATE": "Retard",
       "EXCUSED": "Excusé"
     }
+  },
+  "parentPortal": {
+    "title": "Espace parent",
+    "logout": "Déconnexion",
+    "confirmLogout": "Se déconnecter ?",
+    "matriculeLabel": "Matricule",
+    "noChildren": {
+      "title": "Aucun élève lié à ce compte",
+      "body": "Contacte l'établissement pour lier ton compte à tes enfants."
+    },
+    "gradesTitle": "Notes",
+    "noGrades": "Aucune note enregistrée pour cette période.",
+    "subjectHeader": "Matière",
+    "coeffHeader": "Coeff.",
+    "gradeHeader": "Note",
+    "appreciationHeader": "Appréciation",
+    "generalAverage": "Moyenne générale",
+    "absencesTitle": "Absences",
+    "absencesSummary": "{absent} absence(s), {late} retard(s), {excused} excusée(s)",
+    "noAbsences": "Aucune absence enregistrée.",
+    "paymentsTitle": "Paiements",
+    "tuitionLabel": "Frais de scolarité — {year}",
+    "due": "Montant dû",
+    "paid": "Payé",
+    "remaining": "Restant",
+    "registrationLabel": "Inscription & Réinscription",
+    "noPayments": "Aucun paiement enregistré.",
+    "inscription": "Inscription",
+    "reinscription": "Réinscription"
   },
   "errors": {
     "forbidden": {

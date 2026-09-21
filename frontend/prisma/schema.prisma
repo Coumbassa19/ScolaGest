@@ -69,6 +69,9 @@ model User {
   adminActions      AdminAction[]
   recordedAbsences  Absence[]
   recordedExpenses  Expense[]
+  // The student(s) this account can see, when role is PARENT — see
+  // ParentStudent.
+  parentLinks       ParentStudent[]
 
   // Multi-tenancy is opt-in per project: by default no resource is org-scoped.
   // Apps that need it (marketplace, B2B SaaS, classifieds) wire owner relations
@@ -443,6 +446,7 @@ model School {
   revenuePayments      RevenuePayment[]
   expenses             Expense[]
   salaryAdvances       SalaryAdvance[]
+  parentStudentLinks   ParentStudent[]
   settings             SchoolSettings?
   subscriptionPayments SchoolSubscriptionPayment[]
 
@@ -611,10 +615,39 @@ model Student {
   bulletinRemarks BulletinRemark[]
   schoolMessages  SchoolMessage[]
   absences        Absence[]
+  // Parent/guardian login accounts linked to this student (see
+  // ParentStudent) — separate from the flat parentNom/parentTelephone/
+  // parentEmail above, which are just display/messaging contact info with
+  // no login of their own.
+  parentLinks     ParentStudent[]
 
   @@unique([schoolId, matricule])
   @@index([classId])
   @@index([nom, prenom])
+  @@index([schoolId])
+}
+
+// Links a PARENT-role User account to the student(s) they're allowed to see
+// — the security ground truth for the parent portal (/parent), same role
+// TeacherAssignment plays for a TEACHER's own scope (see teacher-scope.ts).
+// A parent with several children at the school gets ONE account linked to
+// each (siblings), rather than one account per child — set up either at
+// creation (see /api/students/[id]/parents) or by linking an existing
+// parent account to an additional child.
+model ParentStudent {
+  id           String   @id @default(cuid())
+  schoolId     String
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  parentUserId String
+  parentUser   User     @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  relation     String   @default("TUTEUR") // PERE | MERE | TUTEUR
+  createdAt    DateTime @default(now())
+
+  @@unique([parentUserId, studentId])
+  @@index([parentUserId])
+  @@index([studentId])
   @@index([schoolId])
 }
 

@@ -599,7 +599,37 @@
     },
     "detail": {
       "backLink": "STUDENT REGISTER",
-      "matriculeLabel": "ID Number {matricule}"
+      "matriculeLabel": "ID Number {matricule}",
+      "parentAccounts": {
+        "title": "Parent account(s)",
+        "addButton": "+ Add a parent",
+        "noParents": "No parent account linked yet.",
+        "unlink": "Remove",
+        "unlinkConfirm": "Remove this parent's access to this student?",
+        "unlinkedToast": "Access removed.",
+        "linkedToast": "Parent account linked successfully.",
+        "suspended": "suspended",
+        "modeNew": "New account",
+        "modeLinkExisting": "Existing account (sibling)",
+        "emailLabel": "Email",
+        "nameLabel": "Name (optional)",
+        "relationLabel": "Relationship",
+        "relations": {
+          "PERE": "Father",
+          "MERE": "Mother",
+          "TUTEUR": "Guardian"
+        },
+        "searchLabel": "Search an existing parent",
+        "searchPlaceholder": "Name or email…",
+        "searchButton": "Search",
+        "errorSelectParent": "Select a parent from the results.",
+        "submit": "Save",
+        "successEmailSent": "An email was sent to {email} to set their password.",
+        "setupLinkLabel": "Account setup link",
+        "copyLink": "Copy link",
+        "copied": "Copied!",
+        "done": "Done"
+      }
     },
     "add": {
       "backLink": "STUDENT REGISTER",
@@ -1698,6 +1728,35 @@
       "LATE": "Late",
       "EXCUSED": "Excused"
     }
+  },
+  "parentPortal": {
+    "title": "Parent portal",
+    "logout": "Log out",
+    "confirmLogout": "Log out?",
+    "matriculeLabel": "ID Number",
+    "noChildren": {
+      "title": "No student linked to this account",
+      "body": "Contact the school to link your account to your children."
+    },
+    "gradesTitle": "Grades",
+    "noGrades": "No grades recorded for this period.",
+    "subjectHeader": "Subject",
+    "coeffHeader": "Coeff.",
+    "gradeHeader": "Grade",
+    "appreciationHeader": "Appreciation",
+    "generalAverage": "General average",
+    "absencesTitle": "Absences",
+    "absencesSummary": "{absent} absence(s), {late} late, {excused} excused",
+    "noAbsences": "No absence recorded.",
+    "paymentsTitle": "Payments",
+    "tuitionLabel": "Tuition fees — {year}",
+    "due": "Amount due",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "registrationLabel": "Registration & Re-registration",
+    "noPayments": "No payment recorded.",
+    "inscription": "Registration",
+    "reinscription": "Re-registration"
   },
   "errors": {
     "forbidden": {

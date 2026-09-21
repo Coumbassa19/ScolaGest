@@ -66,6 +66,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'RevenuePayment',
   'Expense',
   'SchoolSettings',
+  'ParentStudent',
 ]);
 
 // Operations whose `where` accepts arbitrary (non-unique-only) filters —

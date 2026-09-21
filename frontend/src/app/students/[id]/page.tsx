@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import Sidebar from '@/components/Sidebar';
 import Icon from '@/components/global/Icon';
 import AddStudentForm from '@/components/forms/AddStudentForm';
+import ParentAccountPanel from '@/components/forms/ParentAccountPanel';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
 
 export const metadata: Metadata = {
@@ -21,12 +22,17 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const prisma = staff.user.prisma;
   const { id } = await params;
 
-  const [student, classes, academicYears] = await Promise.all([
+  const [student, classes, academicYears, parentLinks] = await Promise.all([
     prisma.student.findUnique({ where: { id } }),
     prisma.schoolClass.findMany({ orderBy: [{ level: 'desc' }, { name: 'asc' }] }),
     prisma.academicYear.findMany({
       orderBy: [{ isCurrent: 'desc' }, { label: 'desc' }],
       select: { label: true },
+    }),
+    prisma.parentStudent.findMany({
+      where: { studentId: id },
+      include: { parentUser: { select: { id: true, email: true, name: true, status: true } } },
+      orderBy: { createdAt: 'asc' },
     }),
   ]);
 
@@ -35,11 +41,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="flex flex-col md:flex-row bg-background min-h-full font-body">
-      <Sidebar
-        activeItem="students"
-        activeSubmenu="students-list"
-        expandedMenu="students"
-      />
+      <Sidebar activeItem="students" activeSubmenu="students-list" expandedMenu="students" />
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
@@ -81,6 +83,18 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               parentEmail: student.parentEmail ?? '',
             }}
           />
+
+          <div className="mt-6">
+            <ParentAccountPanel
+              studentId={student.id}
+              initialLinks={parentLinks.map((l) => ({
+                id: l.id,
+                relation: l.relation,
+                createdAt: l.createdAt.toISOString(),
+                parentUser: l.parentUser,
+              }))}
+            />
+          </div>
         </div>
       </div>
     </div>
