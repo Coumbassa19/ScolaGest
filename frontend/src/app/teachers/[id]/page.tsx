@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import Sidebar from '@/components/Sidebar';
 import Icon from '@/components/global/Icon';
 import AddTeacherForm from '@/components/forms/AddTeacherForm';
+import TeacherAbsencePanel from '@/components/forms/TeacherAbsencePanel';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
 
 export const metadata: Metadata = {
@@ -21,6 +22,12 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
   const teacher = await prisma.teacher.findUnique({ where: { id } });
   if (!teacher) notFound();
   const t = await getTranslations('teachers.detail');
+
+  const absences = await prisma.teacherAbsence.findMany({
+    where: { teacherId: id },
+    orderBy: { date: 'desc' },
+    take: 100,
+  });
 
   return (
     <div className="flex flex-col md:flex-row bg-background min-h-full font-body">
@@ -42,7 +49,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-4 py-4 md:px-8 md:py-6">
+        <div className="flex-1 px-4 py-4 md:px-8 md:py-6 space-y-6">
           <AddTeacherForm
             teacherId={teacher.id}
             initialData={{
@@ -50,7 +57,17 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               prenom: teacher.prenom,
               email: teacher.email ?? '',
               telephone: teacher.telephone ?? '',
+              statut: teacher.statut === 'VACATAIRE' ? 'VACATAIRE' : 'TEMPS_PLEIN',
+              tauxHoraire: teacher.tauxHoraire?.toString() ?? '',
             }}
+          />
+          <TeacherAbsencePanel
+            teacherId={teacher.id}
+            initialAbsences={absences.map((a) => ({
+              id: a.id,
+              date: a.date.toISOString().slice(0, 10),
+              reason: a.reason,
+            }))}
           />
         </div>
       </div>

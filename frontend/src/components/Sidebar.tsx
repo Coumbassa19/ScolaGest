@@ -33,11 +33,11 @@ const navItems: NavItem[] = [
     icon: 'users',
     labelKey: 'studentsGroup',
     submenu: [
+      { key: 'students-classes', labelKey: 'studentsClasses', href: '/classes' },
       { key: 'students-add', labelKey: 'studentsAdd', href: '/add-student' },
       { key: 'students-reregister', labelKey: 'studentsReregister', href: '/reregister-student' },
       { key: 'students-list', labelKey: 'studentsList', href: '/students' },
       { key: 'students-import', labelKey: 'studentsImport', href: '/students/import' },
-      { key: 'students-classes', labelKey: 'studentsClasses', href: '/classes' },
       { key: 'students-cycles', labelKey: 'studentsCycles', href: '/cycles' },
       { key: 'students-cards', labelKey: 'studentsCards', href: '/student-cards' },
       {

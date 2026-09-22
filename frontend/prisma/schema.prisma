@@ -68,6 +68,7 @@ model User {
   oauthAccounts     OAuthAccount[]
   adminActions      AdminAction[]
   recordedAbsences  Absence[]
+  recordedTeacherAbsences TeacherAbsence[]
   recordedExpenses  Expense[]
   // The student(s) this account can see, when role is PARENT — see
   // ParentStudent.
@@ -436,6 +437,7 @@ model School {
   bulletinRemarks      BulletinRemark[]
   teachers             Teacher[]
   teacherPayments      TeacherPayment[]
+  teacherAbsences      TeacherAbsence[]
   staff                Staff[]
   staffPayments        StaffPayment[]
   tuitionPlans         TuitionPlan[]
@@ -763,6 +765,7 @@ model Teacher {
   advances           SalaryAdvance[]
   schoolMessages     SchoolMessage[]
   teacherAssignments TeacherAssignment[]
+  absences           TeacherAbsence[]
   // The login account for this teacher, if one has been created (see
   // /settings/users) — most Teacher rows have none. Back-relation to
   // User.teacherId.
@@ -791,6 +794,29 @@ model TeacherPayment {
   @@unique([teacherId, periode])
   @@index([teacherId])
   @@index([periode])
+  @@index([schoolId])
+}
+
+// A day a teacher didn't teach — day granularity, like Absence for
+// students. Teachers here are paid by the hour according to their emploi
+// du temps (ScheduleEntry), not a flat salary, so a marked absence is used
+// to subtract that day's scheduled hours (ScheduleEntry rows on the same
+// weekday) from the auto-calculated monthly pay on Comptabilité > Paiement
+// des enseignants, instead of paying for hours never taught.
+model TeacherAbsence {
+  id           String   @id @default(cuid())
+  schoolId     String
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherId    String
+  teacher      Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  date         DateTime // day granularity — always stored at midnight UTC
+  reason       String? // free text, e.g. "Certificat médical"
+  recordedById String?
+  recordedBy   User?    @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@unique([teacherId, date])
+  @@index([teacherId])
   @@index([schoolId])
 }
 

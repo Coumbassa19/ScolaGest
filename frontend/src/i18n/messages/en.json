@@ -793,7 +793,22 @@
       "confirmDelete": "Delete teacher {name}?"
     },
     "detail": {
-      "backLink": "TEACHERS"
+      "backLink": "TEACHERS",
+      "absences": {
+        "title": "Absences",
+        "subtitle": "Mark the days this teacher didn't teach — the hours scheduled that day (per the timetable) will be deducted from the auto-calculated pay.",
+        "dateLabel": "Date:",
+        "reasonLabel": "Reason (optional):",
+        "reasonPlaceholder": "e.g. Illness",
+        "markAbsent": "Mark absent",
+        "remove": "Remove",
+        "confirmRemove": "Remove this absence?",
+        "errorDateRequired": "Date is required.",
+        "errorTeacherNotFound": "This teacher could not be found. They may have been deleted.",
+        "errorAbsenceNotFound": "This absence could not be found. It may already have been removed.",
+        "savedToast": "Absence recorded.",
+        "removedToast": "Absence removed."
+      }
     },
     "add": {
       "backLink": "TEACHERS",
@@ -810,6 +825,14 @@
       "emailPlaceholder": "e.g. mamadou@example.com",
       "phoneLabel": "Telephone:",
       "phonePlaceholder": "e.g. 621 234 567",
+      "payTitle": "Pay",
+      "paySubtitle": "Determines how this teacher is paid on Accounting > Teacher Payments",
+      "statutLabel": "Status:",
+      "statutTempsPlein": "Full-time",
+      "statutVacataire": "Part-time",
+      "hourlyRateLabel": "Hourly rate (GNF):",
+      "hourlyRatePlaceholder": "e.g. 25000",
+      "hourlyRateHint": "Combined with the weekly hours from the timetable to auto-calculate monthly pay.",
       "errorNameRequired": "Surname and first name are required.",
       "errorNetwork": "Network error. Please try again.",
       "errorTeacherNotFound": "This teacher could not be found. They may have been deleted.",
@@ -1271,6 +1294,7 @@
         "statusSectionHint": "The hourly rate is entered manually — teachers are paid according to their timetabled hours, not a fixed salary. Click the amount to correct it.",
         "headerTeacher": "Teacher",
         "headerWeeklyHours": "Hours/Week",
+        "headerAbsenceHours": "Absences this month",
         "headerHourlyRate": "Hourly Rate",
         "headerPaidThisYear": "Paid This Year",
         "headerOutstandingAdvance": "Outstanding Advance",
@@ -1294,6 +1318,7 @@
         "selectTeacherPlaceholder": "— Select a teacher —",
         "noHourlyRateHint": "No hourly rate set for this teacher (see the Teacher Payments page) — enter the amount manually.",
         "autoCalculated": "Automatically calculated: {hours}h/week × {weeks} weeks × {rate} GNF/h.",
+        "absentHoursHint": "{hours}h absent this month — already deducted from the suggested amount.",
         "outstandingAdvanceHint": "Outstanding advance of {amount} GNF — already deducted from the suggested amount.",
         "monthLabel": "Month Paid:",
         "amountPlaceholder": "e.g. 1500000",

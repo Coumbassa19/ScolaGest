@@ -50,6 +50,21 @@ function hoursBetween(heureDebut: string, heureFin: string): number {
   return Math.max(0, (end - start) / 60);
 }
 
+// getUTCDay(): 0=Sunday..6=Saturday — absence dates are stored at midnight
+// UTC (see /api/teacher-absences), so this avoids timezone drift shifting
+// which weekday a date resolves to. Sunday has no matching ScheduleEntry
+// day (JOURS only runs LUNDI..SAMEDI), so it's not schoolday and yields no
+// deduction either way.
+const WEEKDAY_BY_UTC_DAY: Record<number, string | undefined> = {
+  0: undefined,
+  1: 'LUNDI',
+  2: 'MARDI',
+  3: 'MERCREDI',
+  4: 'JEUDI',
+  5: 'VENDREDI',
+  6: 'SAMEDI',
+};
+
 export default async function TeacherPaymentsAccountingPage() {
   const staff = await requirePageAuth({ menuKey: 'accounting' });
   const prisma = staff.user.prisma;
@@ -61,31 +76,46 @@ export default async function TeacherPaymentsAccountingPage() {
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  const startOfNextMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
 
-  const [teachers, recentPayments, yearPayments, scheduleEntries, outstandingAdvances] =
-    await Promise.all([
-      prisma.teacher.findMany({ orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] }),
-      prisma.teacherPayment.findMany({
-        include: { teacher: true },
-        orderBy: { datePaiement: 'desc' },
-        take: 200,
-      }),
-      prisma.teacherPayment.findMany({
-        where: { datePaiement: { gte: startOfYear } },
-        select: { teacherId: true, montant: true, periode: true },
-      }),
-      prisma.scheduleEntry.findMany({
-        where: { teacherId: { not: null } },
-        select: { teacherId: true, heureDebut: true, heureFin: true },
-      }),
-      // Salary advances flagged against THIS month's pay (see Avances sur
-      // salaire) — subtracted from the auto-filled montant so a teacher who
-      // already took a cash advance isn't paid their full salary twice.
-      prisma.salaryAdvance.findMany({
-        where: { teacherId: { not: null }, statut: 'EN_COURS', periodeAAffecter: currentMonth },
-        select: { teacherId: true, montant: true },
-      }),
-    ]);
+  const [
+    teachers,
+    recentPayments,
+    yearPayments,
+    scheduleEntries,
+    outstandingAdvances,
+    monthAbsences,
+  ] = await Promise.all([
+    prisma.teacher.findMany({ orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] }),
+    prisma.teacherPayment.findMany({
+      include: { teacher: true },
+      orderBy: { datePaiement: 'desc' },
+      take: 200,
+    }),
+    prisma.teacherPayment.findMany({
+      where: { datePaiement: { gte: startOfYear } },
+      select: { teacherId: true, montant: true, periode: true },
+    }),
+    prisma.scheduleEntry.findMany({
+      where: { teacherId: { not: null } },
+      select: { teacherId: true, jour: true, heureDebut: true, heureFin: true },
+    }),
+    // Salary advances flagged against THIS month's pay (see Avances sur
+    // salaire) — subtracted from the auto-filled montant so a teacher who
+    // already took a cash advance isn't paid their full salary twice.
+    prisma.salaryAdvance.findMany({
+      where: { teacherId: { not: null }, statut: 'EN_COURS', periodeAAffecter: currentMonth },
+      select: { teacherId: true, montant: true },
+    }),
+    // This month's marked teacher absences — subtracted from the
+    // auto-calculated montant below (see Absences on the teacher detail
+    // page) so a teacher isn't paid for hours never taught.
+    prisma.teacherAbsence.findMany({
+      where: { date: { gte: startOfMonth, lt: startOfNextMonth } },
+      select: { teacherId: true, date: true },
+    }),
+  ]);
 
   const paidThisYearByTeacher = new Map<string, number>();
   const paidThisMonthByTeacher = new Set<string>();
@@ -100,12 +130,28 @@ export default async function TeacherPaymentsAccountingPage() {
   // Weekly hours per teacher from the timetable — teachers here are paid by
   // the hour according to their emploi du temps, not a flat company salary,
   // so this is shown next to the (manually-set) monthly salary as context
-  // for deciding what that amount should actually be.
+  // for deciding what that amount should actually be. Also grouped by
+  // weekday (teacherId -> jour -> hours) so a marked absence on a specific
+  // calendar date can look up exactly how many hours that day represents.
   const weeklyHoursByTeacher = new Map<string, number>();
+  const hoursByTeacherAndDay = new Map<string, number>();
   for (const e of scheduleEntries) {
     if (!e.teacherId) continue;
     const hours = hoursBetween(e.heureDebut, e.heureFin);
     weeklyHoursByTeacher.set(e.teacherId, (weeklyHoursByTeacher.get(e.teacherId) ?? 0) + hours);
+    const dayKey = `${e.teacherId}:${e.jour}`;
+    hoursByTeacherAndDay.set(dayKey, (hoursByTeacherAndDay.get(dayKey) ?? 0) + hours);
+  }
+
+  // Hours to subtract from this month's auto-calculated pay — for each
+  // marked absence day, the teacher's scheduled hours on that same weekday
+  // (see Absences on the teacher detail page).
+  const absentHoursByTeacher = new Map<string, number>();
+  for (const a of monthAbsences) {
+    const jour = WEEKDAY_BY_UTC_DAY[a.date.getUTCDay()];
+    if (!jour) continue;
+    const hours = hoursByTeacherAndDay.get(`${a.teacherId}:${jour}`) ?? 0;
+    absentHoursByTeacher.set(a.teacherId, (absentHoursByTeacher.get(a.teacherId) ?? 0) + hours);
   }
 
   const outstandingAdvanceByTeacher = new Map<string, number>();
@@ -119,10 +165,16 @@ export default async function TeacherPaymentsAccountingPage() {
 
   // Estimated, not contractual — teachers are paid by the hour, so this is
   // heures/semaine × 4 semaines × taux horaire summed across everyone with
-  // both values set.
+  // both values set, minus this month's absence hours × taux horaire.
   const totalMasseSalarialeMensuelle = teachers.reduce(
     (sum, t) =>
-      sum + (t.tauxHoraire ?? 0) * (weeklyHoursByTeacher.get(t.id) ?? 0) * WEEKS_PER_MONTH,
+      sum +
+      Math.max(
+        0,
+        (t.tauxHoraire ?? 0) *
+          ((weeklyHoursByTeacher.get(t.id) ?? 0) * WEEKS_PER_MONTH -
+            (absentHoursByTeacher.get(t.id) ?? 0)),
+      ),
     0,
   );
   const totalPayeCeMois = recentPayments
@@ -165,6 +217,7 @@ export default async function TeacherPaymentsAccountingPage() {
                 prenom: teacher.prenom,
                 tauxHoraire: teacher.tauxHoraire,
                 weeklyHours: weeklyHoursByTeacher.get(teacher.id) ?? 0,
+                absentHours: absentHoursByTeacher.get(teacher.id) ?? 0,
                 outstandingAdvance: outstandingAdvanceByTeacher.get(teacher.id) ?? 0,
               }))}
             />
@@ -241,6 +294,12 @@ export default async function TeacherPaymentsAccountingPage() {
                             : '—'
                         }
                       />
+                      {Boolean(absentHoursByTeacher.get(teacher.id)) && (
+                        <CardField
+                          label={t('headerAbsenceHours')}
+                          value={`-${absentHoursByTeacher.get(teacher.id)}h`}
+                        />
+                      )}
                       <div className="flex items-center justify-between gap-3 text-sm">
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
                           {t('headerHourlyRate')}
@@ -309,6 +368,11 @@ export default async function TeacherPaymentsAccountingPage() {
                             {weeklyHoursByTeacher.get(teacher.id)
                               ? `${weeklyHoursByTeacher.get(teacher.id)}h`
                               : '—'}
+                            {Boolean(absentHoursByTeacher.get(teacher.id)) && (
+                              <span className="block text-xs font-normal text-warning">
+                                {t('headerAbsenceHours')}: -{absentHoursByTeacher.get(teacher.id)}h
+                              </span>
+                            )}
                           </span>
                           <EditableSalaryCell
                             teacherId={teacher.id}

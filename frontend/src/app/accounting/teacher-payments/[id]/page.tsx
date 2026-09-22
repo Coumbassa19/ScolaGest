@@ -83,8 +83,9 @@ export default async function EditTeacherPaymentPage({
               tauxHoraire: t.tauxHoraire,
               weeklyHours: weeklyHoursByTeacher.get(t.id) ?? 0,
               // Editing an existing payment never auto-recalculates the
-              // montant (montantAuto starts false in edit mode), so this
-              // isn't read here — only satisfying the PayableTeacher type.
+              // montant (montantAuto starts false in edit mode), so these
+              // aren't read here — only satisfying the PayableTeacher type.
+              absentHours: 0,
               outstandingAdvance: 0,
             }))}
             initialData={{

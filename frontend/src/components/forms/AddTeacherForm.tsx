@@ -14,7 +14,11 @@ export interface TeacherInitialData {
   prenom: string;
   email: string;
   telephone: string;
+  statut: 'TEMPS_PLEIN' | 'VACATAIRE';
+  tauxHoraire: string;
 }
+
+type StatutValue = 'TEMPS_PLEIN' | 'VACATAIRE';
 
 // Maps the stable `error` codes /api/teachers/[id] can return to the
 // matching translation key in `teachers.form`, so a server error always
@@ -43,6 +47,8 @@ export default function AddTeacherForm({
   const [prenom, setPrenom] = useState(initialData?.prenom ?? '');
   const [email, setEmail] = useState(initialData?.email ?? '');
   const [telephone, setTelephone] = useState(initialData?.telephone ?? '');
+  const [statut, setStatut] = useState<StatutValue>(initialData?.statut ?? 'TEMPS_PLEIN');
+  const [tauxHoraire, setTauxHoraire] = useState(initialData?.tauxHoraire ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +66,8 @@ export default function AddTeacherForm({
         prenom: prenom.trim(),
         email: email.trim() || undefined,
         telephone: telephone.trim() || undefined,
+        statut,
+        tauxHoraire: tauxHoraire.trim() ? Number(tauxHoraire) : undefined,
       };
       if (isEdit) {
         await api(`/api/teachers/${teacherId}`, { method: 'PATCH', body });
@@ -148,6 +156,47 @@ export default function AddTeacherForm({
                 placeholder={t('phonePlaceholder')}
                 className={fieldClass}
               />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pay Section */}
+      <div className="bg-surface rounded-lg border border-border px-6 py-5">
+        <div className="mb-4 pb-4 border-b border-border">
+          <h2 className="text-lg font-headings font-semibold text-foreground">{t('payTitle')}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t('paySubtitle')}</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                {t('statutLabel')}
+              </label>
+              <select
+                value={statut}
+                onChange={(e) => setStatut(e.target.value as StatutValue)}
+                className={fieldClass}
+              >
+                <option value="TEMPS_PLEIN">{t('statutTempsPlein')}</option>
+                <option value="VACATAIRE">{t('statutVacataire')}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                {t('hourlyRateLabel')}
+              </label>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={tauxHoraire}
+                onChange={(e) => setTauxHoraire(e.target.value)}
+                placeholder={t('hourlyRatePlaceholder')}
+                className={fieldClass}
+              />
+              <p className="text-xs text-muted-foreground mt-1">{t('hourlyRateHint')}</p>
             </div>
           </div>
         </div>

@@ -29,6 +29,7 @@ const Body = z.object({
   statut: z.enum(['TEMPS_PLEIN', 'VACATAIRE']).default('TEMPS_PLEIN'),
   classesAssignees: z.string().trim().max(300).optional(),
   remunerationMensuelle: z.number().int().nonnegative().optional(),
+  tauxHoraire: z.number().int().nonnegative().optional(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         ...(data.remunerationMensuelle !== undefined
           ? { remunerationMensuelle: data.remunerationMensuelle }
           : {}),
+        ...(data.tauxHoraire !== undefined ? { tauxHoraire: data.tauxHoraire } : {}),
       },
     });
     return NextResponse.json(

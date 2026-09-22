@@ -779,7 +779,22 @@
       "confirmDelete": "Supprimer l'enseignant {name} ?"
     },
     "detail": {
-      "backLink": "ENSEIGNANTS"
+      "backLink": "ENSEIGNANTS",
+      "absences": {
+        "title": "Absences",
+        "subtitle": "Marquer les jours où cet enseignant n'a pas fait cours — les heures prévues ce jour-là (selon l'emploi du temps) seront déduites du calcul automatique du salaire.",
+        "dateLabel": "Date :",
+        "reasonLabel": "Motif (optionnel) :",
+        "reasonPlaceholder": "ex. Maladie",
+        "markAbsent": "Marquer absent",
+        "remove": "Retirer",
+        "confirmRemove": "Retirer cette absence ?",
+        "errorDateRequired": "La date est obligatoire.",
+        "errorTeacherNotFound": "Cet enseignant est introuvable. Il a peut-être été supprimé.",
+        "errorAbsenceNotFound": "Cette absence est introuvable. Elle a peut-être déjà été retirée.",
+        "savedToast": "Absence enregistrée.",
+        "removedToast": "Absence retirée."
+      }
     },
     "add": {
       "backLink": "ENSEIGNANTS",
@@ -796,6 +811,14 @@
       "emailPlaceholder": "ex. mamadou@example.com",
       "phoneLabel": "Téléphone :",
       "phonePlaceholder": "ex. 621 234 567",
+      "payTitle": "Rémunération",
+      "paySubtitle": "Détermine comment cet enseignant est payé sur Comptabilité > Paiement des enseignants",
+      "statutLabel": "Statut :",
+      "statutTempsPlein": "Temps plein",
+      "statutVacataire": "Vacataire",
+      "hourlyRateLabel": "Taux horaire (GNF) :",
+      "hourlyRatePlaceholder": "ex. 25000",
+      "hourlyRateHint": "Combiné aux heures/semaine de l'emploi du temps pour calculer automatiquement le salaire mensuel.",
       "errorNameRequired": "Le nom et le prénom sont obligatoires.",
       "errorNetwork": "Erreur réseau. Réessaie.",
       "errorTeacherNotFound": "Cet enseignant est introuvable. Il a peut-être été supprimé.",
@@ -1257,6 +1280,7 @@
         "statusSectionHint": "Le salaire par heure est une saisie manuelle — les enseignants sont payés selon leurs heures à l'emploi du temps, pas un salaire fixe. Clique sur le montant pour le corriger.",
         "headerTeacher": "Enseignant",
         "headerWeeklyHours": "Heures/semaine",
+        "headerAbsenceHours": "Absences ce mois",
         "headerHourlyRate": "Salaire par heure",
         "headerPaidThisYear": "Payé cette année",
         "headerOutstandingAdvance": "Avance en cours",
@@ -1280,6 +1304,7 @@
         "selectTeacherPlaceholder": "— Sélectionner un enseignant —",
         "noHourlyRateHint": "Aucun taux horaire défini pour cet enseignant (page Paiement des enseignants) — saisis le montant manuellement.",
         "autoCalculated": "Calculé automatiquement : {hours}h/semaine × {weeks} semaines × {rate} GNF/h.",
+        "absentHoursHint": "{hours}h d'absence ce mois-ci — déjà déduites du montant proposé.",
         "outstandingAdvanceHint": "Avance en cours de {amount} GNF — déjà déduite du montant proposé.",
         "monthLabel": "Mois payé :",
         "amountPlaceholder": "ex. 1500000",

@@ -21,6 +21,8 @@ export interface PayableTeacher {
   prenom: string;
   tauxHoraire: number | null;
   weeklyHours: number;
+  /** Hours this month deducted for marked absences — see Fiche enseignant > Absences. */
+  absentHours: number;
   /** Outstanding (EN_COURS) salary advance flagged against THIS month — see Avances sur salaire. */
   outstandingAdvance: number;
 }
@@ -59,7 +61,8 @@ function currentMonthValue(): string {
 
 function estimateMontant(teacher: PayableTeacher | null): string {
   if (!teacher?.tauxHoraire || !teacher.weeklyHours) return '';
-  const gross = Math.round(teacher.weeklyHours * WEEKS_PER_MONTH * teacher.tauxHoraire);
+  const paidHours = Math.max(0, teacher.weeklyHours * WEEKS_PER_MONTH - teacher.absentHours);
+  const gross = Math.round(paidHours * teacher.tauxHoraire);
   return String(Math.max(0, gross - teacher.outstandingAdvance));
 }
 
@@ -221,6 +224,11 @@ export default function TeacherPaymentForm({
                 weeks: WEEKS_PER_MONTH,
                 rate: selectedTeacher.tauxHoraire.toLocaleString('fr-FR'),
               })}
+            </p>
+          )}
+          {selectedTeacher && selectedTeacher.absentHours > 0 && (
+            <p className="text-xs text-warning mt-1">
+              {t('absentHoursHint', { hours: selectedTeacher.absentHours })}
             </p>
           )}
           {selectedTeacher && selectedTeacher.outstandingAdvance > 0 && (
