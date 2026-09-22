@@ -48,8 +48,8 @@ const navItems: NavItem[] = [
     ],
   },
   { key: 'teachers', icon: 'graduation-cap', labelKey: 'teachers', href: '/teachers' },
-  { key: 'schedule', icon: 'calendar', labelKey: 'schedule', href: '/schedule' },
   { key: 'subjects', icon: 'book-open', labelKey: 'subjects', href: '/subjects' },
+  { key: 'schedule', icon: 'calendar', labelKey: 'schedule', href: '/schedule' },
   { key: 'grades', icon: 'bar-chart-2', labelKey: 'grades', href: '/grades' },
   {
     key: 'accounting',
