@@ -143,8 +143,8 @@ export default function Sidebar({
       {/* Logo */}
       <div className="px-5 pt-6 pb-5 border-b border-sidebar-muted border-opacity-20">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-accent rounded-md flex items-center justify-center">
-            <Icon i="graduation-cap" size={14} />
+          <div className="w-7 h-7 bg-white rounded-md flex items-center justify-center p-1 flex-shrink-0">
+            <img src="/logo-icon.png" alt="ScolaGest" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="text-sidebar-foreground font-headings font-semibold text-base leading-tight">
@@ -267,8 +267,8 @@ export default function Sidebar({
       {/* Mobile top bar — shown below md, replaces the static sidebar */}
       <div className="flex md:hidden items-center justify-between px-4 py-3 bg-sidebar border-b border-sidebar-muted border-opacity-20">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-accent rounded-md flex items-center justify-center">
-            <Icon i="graduation-cap" size={14} />
+          <div className="w-7 h-7 bg-white rounded-md flex items-center justify-center p-1 flex-shrink-0">
+            <img src="/logo-icon.png" alt="ScolaGest" className="w-full h-full object-contain" />
           </div>
           <div className="text-sidebar-foreground font-headings font-semibold text-base leading-tight">
             ScolaGest

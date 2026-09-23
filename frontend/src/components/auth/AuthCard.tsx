@@ -7,7 +7,6 @@
 
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import Icon from '@/components/global/Icon';
 
 export default function AuthCard({
   title,
@@ -26,8 +25,8 @@ export default function AuthCard({
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center gap-1 mb-6">
           <div className="flex items-center justify-center gap-2.5">
-            <div className="w-9 h-9 bg-accent rounded-md flex items-center justify-center">
-              <Icon i="graduation-cap" size={18} />
+            <div className="w-9 h-9 bg-white border border-border rounded-md flex items-center justify-center p-1">
+              <img src="/logo-icon.png" alt="ScolaGest" className="w-full h-full object-contain" />
             </div>
             <div className="text-foreground font-headings font-semibold text-lg">ScolaGest</div>
           </div>

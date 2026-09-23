@@ -22,7 +22,6 @@ export default function AuthSplitLayout({
 }) {
   const t = useTranslations('auth');
   const tHome = useTranslations('homepage');
-  const year = new Date().getFullYear();
 
   return (
     <div className="flex min-h-screen bg-background font-body">
@@ -30,8 +29,8 @@ export default function AuthSplitLayout({
       <div className="hidden lg:flex w-80 bg-primary flex-col justify-between px-8 py-12 flex-shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 bg-primary-foreground rounded-xl flex items-center justify-center">
-              <Icon i="graduation-cap" size={22} className="text-primary" />
+            <div className="w-10 h-10 bg-primary-foreground rounded-xl flex items-center justify-center p-1.5">
+              <img src="/logo-icon.png" alt="ScolaGest" className="w-full h-full object-contain" />
             </div>
             <span className="text-xl font-headings font-semibold text-primary-foreground">
               {tHome('nav.brand')}
@@ -62,7 +61,7 @@ export default function AuthSplitLayout({
         </div>
 
         <p className="text-xs text-primary-foreground" style={{ opacity: 0.45 }}>
-          {tHome('footer.copyright', { year })}
+          {tHome('footer.copyright')}
         </p>
       </div>
 
@@ -70,8 +69,8 @@ export default function AuthSplitLayout({
       <div className="flex-1 flex items-center justify-center px-4 py-10 sm:px-8 md:py-12">
         <div className="w-full max-w-md">
           <div className="flex lg:hidden items-center justify-center gap-2.5 mb-8">
-            <div className="w-9 h-9 bg-accent rounded-md flex items-center justify-center">
-              <Icon i="graduation-cap" size={18} />
+            <div className="w-9 h-9 bg-white border border-border rounded-md flex items-center justify-center p-1">
+              <img src="/logo-icon.png" alt="ScolaGest" className="w-full h-full object-contain" />
             </div>
             <span className="text-foreground font-headings font-semibold text-lg">
               {tHome('nav.brand')}

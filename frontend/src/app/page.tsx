@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import Icon from '@/components/global/Icon';
+import WhatsAppIcon from '@/components/global/WhatsAppIcon';
 import DemoRequestForm from '@/components/DemoRequestForm';
+import ScrollReveal from '@/components/ScrollReveal';
 import { prisma } from '@/lib/server/prisma';
 import { PLANS } from '@/lib/server/billing/constants';
 import { formatPrice } from '@/lib/utils';
@@ -47,7 +49,6 @@ const MIN_FEATURED_SCHOOLS_TO_SHOW = 3;
 
 export default async function HomePage() {
   const t = await getTranslations('homepage');
-  const year = new Date().getFullYear();
 
   const featuredSchools = await prisma.school.findMany({
     where: { featuredOnHomepage: true, logoUrl: { not: null } },
@@ -70,8 +71,10 @@ export default async function HomePage() {
       <nav className="sticky top-0 z-50 bg-primary px-4 py-4 md:px-8">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-primary-foreground rounded-lg flex items-center justify-center">
-              <Icon i="graduation-cap" size={20} className="text-primary" />
+            <div className="w-9 h-9 bg-primary-foreground rounded-lg flex items-center justify-center p-1">
+              {/* Actual ScolaGest logo — same file used everywhere the brand
+                  mark appears, so colors never drift between contexts. */}
+              <img src="/logo-icon.png" alt="ScolaGest" className="w-full h-full object-contain" />
             </div>
             <span className="text-lg font-headings font-semibold text-primary-foreground tracking-wide">
               {t('nav.brand')}
@@ -90,7 +93,7 @@ export default async function HomePage() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-success rounded-full"
             >
-              <Icon i="message-circle" size={16} />
+              <WhatsAppIcon size={16} />
               {t('nav.whatsapp')}
             </a>
             <Link
@@ -106,9 +109,9 @@ export default async function HomePage() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t('nav.whatsapp')}
-              className="w-9 h-9 flex items-center justify-center bg-success rounded-full text-white"
+              className="w-11 h-11 flex items-center justify-center bg-success rounded-full text-white"
             >
-              <Icon i="message-circle" size={16} />
+              <WhatsAppIcon size={22} />
             </a>
             <Link
               href="/login"
@@ -157,11 +160,11 @@ export default async function HomePage() {
         <section className="relative z-10 px-4 py-14 md:px-8 md:py-20">
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
             <div>
-              <h1 className="text-3xl md:text-5xl font-headings font-semibold text-primary-foreground leading-tight mb-6 whitespace-pre-line">
+              <h1 className="text-3xl md:text-5xl font-headings font-semibold text-primary-foreground leading-tight mb-6 whitespace-pre-line text-center lg:text-left">
                 {t('hero.title')}
               </h1>
               <p
-                className="text-base md:text-lg text-primary-foreground leading-relaxed mb-8"
+                className="text-base md:text-lg text-primary-foreground leading-relaxed mb-8 text-center lg:text-left"
                 style={{ opacity: 0.85 }}
               >
                 {t('hero.subtitle')}
@@ -172,14 +175,6 @@ export default async function HomePage() {
                   className="px-6 py-3 bg-accent text-accent-foreground font-semibold text-base rounded-lg text-center"
                 >
                   {t('hero.ctaPrimary')}
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-6 py-3 text-primary-foreground font-semibold text-base border border-primary-foreground rounded-lg flex items-center justify-center gap-2"
-                  style={{ borderColor: 'rgba(255,255,255,0.5)' }}
-                >
-                  <Icon i="log-in" size={18} />
-                  {t('hero.ctaSecondary')}
                 </Link>
               </div>
               <p className="text-xs text-primary-foreground mt-6" style={{ opacity: 0.7 }}>
@@ -272,27 +267,29 @@ export default async function HomePage() {
         className="px-4 py-16 md:px-8 md:py-24 bg-surface border-t border-border"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 md:mb-16">
+          <ScrollReveal className="text-center mb-12 md:mb-16">
             <h2 className="text-2xl md:text-4xl font-headings font-semibold text-foreground mb-4">
               {t('features.title')}
             </h2>
             <p className="text-base md:text-lg text-muted-foreground">{t('features.subtitle')}</p>
-          </div>
+          </ScrollReveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURE_ICONS.map((icon, i) => {
               const n = i + 1;
               return (
-                <div key={icon} className="bg-background border border-border rounded-xl p-6">
-                  <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
-                    <Icon i={icon} size={24} className="text-primary" />
+                <ScrollReveal key={icon} delayMs={(i % 3) * 80}>
+                  <div className="bg-background border border-border rounded-xl p-6">
+                    <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
+                      <Icon i={icon} size={24} className="text-primary" />
+                    </div>
+                    <h3 className="text-lg font-headings font-semibold text-foreground mb-2">
+                      {t(`features.item${n}Title` as never)}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {t(`features.item${n}Desc` as never)}
+                    </p>
                   </div>
-                  <h3 className="text-lg font-headings font-semibold text-foreground mb-2">
-                    {t(`features.item${n}Title` as never)}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t(`features.item${n}Desc` as never)}
-                  </p>
-                </div>
+                </ScrollReveal>
               );
             })}
           </div>
@@ -302,145 +299,154 @@ export default async function HomePage() {
       {/* PRICING */}
       <section id="pricing" className="px-4 py-16 md:px-8 md:py-24 bg-background">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12 md:mb-16">
+          <ScrollReveal className="text-center mb-12 md:mb-16">
             <h2 className="text-2xl md:text-4xl font-headings font-semibold text-foreground mb-4">
               {t('pricing.title')}
             </h2>
             <p className="text-base md:text-lg text-muted-foreground">{t('pricing.subtitle')}</p>
-          </div>
+          </ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-start">
             {/* Forfait Essentiel — écoles primaires uniquement / petits effectifs */}
-            <div className="bg-surface border border-border rounded-2xl p-8 md:p-10">
-              <div className="mb-6">
-                <h3 className="text-2xl font-headings font-semibold text-foreground">
-                  {t('pricing.essentiel.name')}
-                </h3>
-                <p className="text-sm mt-1 text-muted-foreground">
-                  {t('pricing.essentiel.tagline')}
-                </p>
-              </div>
-              <div className="mb-6 pb-6 border-b border-border">
-                <div className="flex items-end gap-2 mb-1">
-                  <span className="text-3xl md:text-4xl font-headings font-semibold text-foreground">
-                    {formatPrice(PLANS.ESSENTIEL.priceGNF, 'GNF')}
-                  </span>
-                  <span className="pb-1 text-muted-foreground">{t('pricing.pricePeriod')}</span>
+            <ScrollReveal>
+              <div className="bg-surface border border-border rounded-2xl p-8 md:p-10">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-headings font-semibold text-foreground">
+                    {t('pricing.essentiel.name')}
+                  </h3>
+                  <p className="text-sm mt-1 text-muted-foreground">
+                    {t('pricing.essentiel.tagline')}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">{t('pricing.trialNote')}</p>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
-                <span className="text-sm font-semibold text-foreground">
-                  {t('pricing.essentiel.studentLimit')}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-                {PRICING_FEATURE_KEYS.map((key) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
-                    <span className="text-sm text-foreground">{t(`pricing.${key}`)}</span>
+                <div className="mb-6 pb-6 border-b border-border">
+                  <div className="flex items-end gap-2 mb-1 flex-wrap-reverse whitespace-nowrap">
+                    <span className="text-3xl md:text-4xl font-headings font-semibold text-foreground">
+                      {formatPrice(PLANS.ESSENTIEL.priceGNF, 'GNF')}
+                    </span>
+                    <span className="pb-1 text-muted-foreground">{t('pricing.pricePeriod')}</span>
                   </div>
-                ))}
+                  <p className="text-xs text-muted-foreground">{t('pricing.trialNote')}</p>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {t('pricing.essentiel.studentLimit')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                  {PRICING_FEATURE_KEYS.map((key) => (
+                    <div key={key} className="flex items-center gap-3">
+                      <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
+                      <span className="text-sm text-foreground">{t(`pricing.${key}`)}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href="/signup?plan=ESSENTIEL"
+                  className="block w-full py-3 bg-primary text-primary-foreground font-semibold text-sm rounded-lg text-center"
+                >
+                  {t('pricing.essentiel.cta')}
+                </Link>
               </div>
-              <Link
-                href="/signup?plan=ESSENTIEL"
-                className="block w-full py-3 bg-primary text-primary-foreground font-semibold text-sm rounded-lg text-center"
-              >
-                {t('pricing.essentiel.cta')}
-              </Link>
-            </div>
+            </ScrollReveal>
 
             {/* Forfait Flexible — sans engagement annuel, élèves illimités */}
-            <div className="bg-surface border border-border rounded-2xl p-8 md:p-10">
-              <div className="mb-6">
-                <h3 className="text-2xl font-headings font-semibold text-foreground">
-                  {t('pricing.flexible.name')}
-                </h3>
-                <p className="text-sm mt-1 text-muted-foreground">
-                  {t('pricing.flexible.tagline')}
-                </p>
-              </div>
-              <div className="mb-6 pb-6 border-b border-border">
-                <div className="flex items-end gap-2 mb-1">
-                  <span className="text-3xl md:text-4xl font-headings font-semibold text-foreground">
-                    {formatPrice(PLANS.FLEXIBLE.priceGNF, 'GNF')}
-                  </span>
-                  <span className="pb-1 text-muted-foreground">
-                    {t('pricing.pricePeriodQuarterly')}
+            <ScrollReveal delayMs={100}>
+              <div className="bg-surface border border-border rounded-2xl p-8 md:p-10">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-headings font-semibold text-foreground">
+                    {t('pricing.flexible.name')}
+                  </h3>
+                  <p className="text-sm mt-1 text-muted-foreground">
+                    {t('pricing.flexible.tagline')}
+                  </p>
+                </div>
+                <div className="mb-6 pb-6 border-b border-border">
+                  <div className="flex items-end gap-2 mb-1 flex-wrap-reverse whitespace-nowrap">
+                    <span className="text-3xl md:text-4xl font-headings font-semibold text-foreground">
+                      {formatPrice(PLANS.FLEXIBLE.priceGNF, 'GNF')}
+                    </span>
+                    <span className="pb-1 text-muted-foreground">
+                      {t('pricing.pricePeriodQuarterly')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t('pricing.trialNote')}</p>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {t('pricing.flexible.studentLimit')}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{t('pricing.trialNote')}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                  {PRICING_FEATURE_KEYS.map((key) => (
+                    <div key={key} className="flex items-center gap-3">
+                      <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
+                      <span className="text-sm text-foreground">{t(`pricing.${key}`)}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href="/signup?plan=FLEXIBLE"
+                  className="block w-full py-3 bg-primary text-primary-foreground font-semibold text-sm rounded-lg text-center"
+                >
+                  {t('pricing.flexible.cta')}
+                </Link>
               </div>
-              <div className="flex items-center gap-3 mb-4">
-                <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
-                <span className="text-sm font-semibold text-foreground">
-                  {t('pricing.flexible.studentLimit')}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-                {PRICING_FEATURE_KEYS.map((key) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <Icon i="check" size={16} className="flex-shrink-0 text-primary" />
-                    <span className="text-sm text-foreground">{t(`pricing.${key}`)}</span>
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/signup?plan=FLEXIBLE"
-                className="block w-full py-3 bg-primary text-primary-foreground font-semibold text-sm rounded-lg text-center"
-              >
-                {t('pricing.flexible.cta')}
-              </Link>
-            </div>
+            </ScrollReveal>
 
             {/* Forfait Croissance — le plus populaire, élèves illimités */}
-            <div className="relative bg-primary text-primary-foreground rounded-2xl p-8 md:p-10 shadow-xl md:-mt-4">
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap">
-                {t('pricing.mostPopular')}
-              </span>
-              <div className="mb-6">
-                <h3 className="text-2xl font-headings font-semibold">
-                  {t('pricing.croissance.name')}
-                </h3>
-                <p className="text-sm mt-1" style={{ opacity: 0.8 }}>
-                  {t('pricing.croissance.tagline')}
-                </p>
-              </div>
-              <div className="mb-6 pb-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.2)' }}>
-                <div className="flex items-end gap-2 mb-1">
-                  <span className="text-3xl md:text-4xl font-headings font-semibold">
-                    {formatPrice(PLANS.CROISSANCE.priceGNF, 'GNF')}
-                  </span>
-                  <span className="pb-1" style={{ opacity: 0.8 }}>
-                    {t('pricing.pricePeriod')}
+            <ScrollReveal delayMs={200}>
+              <div className="relative bg-primary text-primary-foreground rounded-2xl p-8 md:p-10 shadow-xl">
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap">
+                  {t('pricing.mostPopular')}
+                </span>
+                <div className="mb-6">
+                  <h3 className="text-2xl font-headings font-semibold">
+                    {t('pricing.croissance.name')}
+                  </h3>
+                  <p className="text-sm mt-1" style={{ opacity: 0.8 }}>
+                    {t('pricing.croissance.tagline')}
+                  </p>
+                </div>
+                <div
+                  className="mb-6 pb-6 border-b"
+                  style={{ borderColor: 'rgba(255,255,255,0.2)' }}
+                >
+                  <div className="flex items-end gap-2 mb-1 flex-wrap-reverse whitespace-nowrap">
+                    <span className="text-3xl md:text-4xl font-headings font-semibold">
+                      {formatPrice(PLANS.CROISSANCE.priceGNF, 'GNF')}
+                    </span>
+                    <span className="pb-1" style={{ opacity: 0.8 }}>
+                      {t('pricing.pricePeriod')}
+                    </span>
+                  </div>
+                  <p className="text-xs" style={{ opacity: 0.7 }}>
+                    {t('pricing.trialNote')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <Icon i="check" size={16} className="flex-shrink-0" />
+                  <span className="text-sm font-semibold">
+                    {t('pricing.croissance.studentLimit')}
                   </span>
                 </div>
-                <p className="text-xs" style={{ opacity: 0.7 }}>
-                  {t('pricing.trialNote')}
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                  {PRICING_FEATURE_KEYS.map((key) => (
+                    <div key={key} className="flex items-center gap-3">
+                      <Icon i="check" size={16} className="flex-shrink-0" />
+                      <span className="text-sm">{t(`pricing.${key}`)}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href="/signup?plan=CROISSANCE"
+                  className="block w-full py-3 bg-primary-foreground text-primary font-semibold text-sm rounded-lg text-center"
+                >
+                  {t('pricing.croissance.cta')}
+                </Link>
               </div>
-              <div className="flex items-center gap-3 mb-4">
-                <Icon i="check" size={16} className="flex-shrink-0" />
-                <span className="text-sm font-semibold">
-                  {t('pricing.croissance.studentLimit')}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-                {PRICING_FEATURE_KEYS.map((key) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <Icon i="check" size={16} className="flex-shrink-0" />
-                    <span className="text-sm">{t(`pricing.${key}`)}</span>
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/signup?plan=CROISSANCE"
-                className="block w-full py-3 bg-primary-foreground text-primary font-semibold text-sm rounded-lg text-center"
-              >
-                {t('pricing.croissance.cta')}
-              </Link>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -452,7 +458,7 @@ export default async function HomePage() {
           school-management sites. */}
       {showTrustedSchools && (
         <section className="px-4 py-16 md:px-8 md:py-20 bg-muted overflow-hidden">
-          <div className="max-w-7xl mx-auto text-center mb-10 md:mb-12">
+          <ScrollReveal className="max-w-7xl mx-auto text-center mb-10 md:mb-12">
             {/* Same size/weight as the pricing H2 ("Un tarif adapté...") —
                 this section deserves the same visual weight, not a small
                 muted eyebrow label. */}
@@ -462,10 +468,23 @@ export default async function HomePage() {
             <p className="text-base md:text-lg text-muted-foreground">
               {t('trustedSchools.subtitle')}
             </p>
-          </div>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 md:w-24 bg-gradient-to-r from-muted to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 md:w-24 bg-gradient-to-l from-muted to-transparent" />
+          </ScrollReveal>
+          <div
+            className="relative"
+            // A CSS mask fades the track's OWN edges directly, instead of
+            // layering a separately-colored overlay div on top of it (the
+            // previous approach — that overlay could only ever approximate
+            // the backdrop color, and depended on painting above the cards
+            // in a way that wasn't reliably visible). A mask can't have
+            // that problem: it clips this element's own content, so the
+            // fade is guaranteed correct regardless of what's behind it.
+            style={{
+              maskImage:
+                'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
+              WebkitMaskImage:
+                'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
+            }}
+          >
             <div className="flex w-max gap-6 animate-scroll-logos hover:[animation-play-state:paused] motion-reduce:animate-none md:gap-8">
               {[...featuredSchools, ...featuredSchools].map((school, i) => (
                 <div
@@ -493,23 +512,20 @@ export default async function HomePage() {
           the logo mark) on the right. Stacks to one column on mobile, where
           the divider (a side border, meaningless once stacked) disappears. */}
       <section className="grid grid-cols-1 md:grid-cols-2">
-        <div className="flex items-center justify-center bg-primary px-4 py-16 text-primary-foreground md:border-r md:border-primary-foreground/15 md:px-12 md:py-20">
+        <ScrollReveal className="flex items-center justify-center bg-primary px-4 py-16 text-primary-foreground md:border-r md:border-primary-foreground/15 md:px-12 md:py-20">
           <div className="w-full max-w-md text-center md:text-left">
             <h2 className="text-2xl md:text-4xl font-headings font-semibold mb-4">
               {t('finalCta.title')}
             </h2>
-            <p className="text-base md:text-lg mb-8" style={{ opacity: 0.9 }}>
+            <p className="text-base md:text-lg" style={{ opacity: 0.9 }}>
               {t('finalCta.subtitle')}
             </p>
-            <Link
-              href="/signup"
-              className="inline-block px-8 py-4 bg-primary-foreground text-primary font-headings font-semibold text-lg rounded-lg"
-            >
-              {t('finalCta.cta')}
-            </Link>
           </div>
-        </div>
-        <div className="flex items-center justify-center bg-accent px-4 py-16 md:px-12 md:py-20">
+        </ScrollReveal>
+        <ScrollReveal
+          delayMs={120}
+          className="flex items-center justify-center bg-accent px-4 py-16 md:px-12 md:py-20"
+        >
           <div className="w-full max-w-md text-center md:text-left">
             <h2 className="text-2xl md:text-4xl font-headings font-semibold text-accent-foreground mb-4">
               {t('demoForm.title')}
@@ -522,7 +538,7 @@ export default async function HomePage() {
             </p>
             <DemoRequestForm />
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* FOOTER */}
@@ -531,8 +547,12 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-10">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Icon i="graduation-cap" size={16} className="text-primary-foreground" />
+                <div className="w-8 h-8 bg-primary-foreground border border-border rounded-lg flex items-center justify-center p-1">
+                  <img
+                    src="/logo-icon.png"
+                    alt="ScolaGest"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <span className="font-semibold text-foreground">{t('nav.brand')}</span>
               </div>
@@ -566,7 +586,7 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="border-t border-border pt-6">
-            <p className="text-xs text-muted-foreground">{t('footer.copyright', { year })}</p>
+            <p className="text-xs text-muted-foreground text-center">{t('footer.copyright')}</p>
           </div>
         </div>
       </footer>

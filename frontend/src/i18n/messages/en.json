@@ -278,7 +278,6 @@
       "title": "Run your school.\nNo paperwork, no stress.",
       "subtitle": "ScolaGest is the all-in-one platform for schools: enrollment, report cards, payments and scheduling, all in one secure workspace.",
       "ctaPrimary": "Try free for 14 days",
-      "ctaSecondary": "Log in",
       "trust": "No credit card required · 14-day free trial · Data isolated per school"
     },
     "heroPanel": {
@@ -338,8 +337,7 @@
     },
     "finalCta": {
       "title": "Ready to simplify your school's management?",
-      "subtitle": "Create your account in minutes. 14 days free, no credit card.",
-      "cta": "Get started for free"
+      "subtitle": "Students, grades, finances and communication: everything your school needs, all in one place."
     },
     "demoForm": {
       "title": "Request a demo",
@@ -369,7 +367,7 @@
       "accountTitle": "Account",
       "login": "Log in",
       "signup": "Create an account",
-      "copyright": "© {year} ScolaGest — Made for schools in Guinea."
+      "copyright": "© ScolaGest — School management, simplified."
     }
   },
   "platform": {

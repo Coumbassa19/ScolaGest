@@ -47,7 +47,13 @@ describe('sendSubscriptionReminders', () => {
     const trialEndsAt = new Date('2026-01-10T00:00:00Z'); // 9 days out — inside the window
     const prisma = makePrismaMock({
       trialingSchools: [
-        { id: 'school-1', name: 'École Test', plan: 'CROISSANCE', trialEndsAt, remindersSentDays: [] },
+        {
+          id: 'school-1',
+          name: 'École Test',
+          plan: 'CROISSANCE',
+          trialEndsAt,
+          remindersSentDays: [],
+        },
       ],
       users: [{ email: 'owner@school1.test' }],
     });
@@ -57,10 +63,10 @@ describe('sendSubscriptionReminders', () => {
       expect.objectContaining({
         to: 'owner@school1.test',
         subject: expect.stringContaining('École Test'),
-        html: expect.stringContaining('3 000 000 GNF'),
+        html: expect.stringContaining('3 000 000 GNF'),
       }),
     );
-    expect((prisma.school.update as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+    expect(prisma.school.update as ReturnType<typeof vi.fn>).toHaveBeenCalledWith({
       where: { id: 'school-1' },
       data: { remindersSentDays: { push: 15 } },
     });
@@ -71,13 +77,19 @@ describe('sendSubscriptionReminders', () => {
     const trialEndsAt = new Date('2026-01-10T00:00:00Z');
     const prisma = makePrismaMock({
       trialingSchools: [
-        { id: 'school-1b', name: 'École Primaire', plan: 'ESSENTIEL', trialEndsAt, remindersSentDays: [] },
+        {
+          id: 'school-1b',
+          name: 'École Primaire',
+          plan: 'ESSENTIEL',
+          trialEndsAt,
+          remindersSentDays: [],
+        },
       ],
       users: [{ email: 'owner@primaire.test' }],
     });
     await sendSubscriptionReminders({ prisma, appUrl: 'https://app.test', now });
     expect(enqueue).toHaveBeenCalledWith(
-      expect.objectContaining({ html: expect.stringContaining('2 000 000 GNF') }),
+      expect.objectContaining({ html: expect.stringContaining('2 000 000 GNF') }),
     );
   });
 
@@ -92,7 +104,7 @@ describe('sendSubscriptionReminders', () => {
     });
     const result = await sendSubscriptionReminders({ prisma, appUrl: 'https://app.test', now });
     expect(result).toEqual({ sent: 1, skipped: 0 });
-    expect((prisma.school.update as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+    expect(prisma.school.update as ReturnType<typeof vi.fn>).toHaveBeenCalledWith({
       where: { id: 'school-2' },
       data: { remindersSentDays: { push: 7 } },
     });
@@ -112,7 +124,7 @@ describe('sendSubscriptionReminders', () => {
     expect(enqueue).toHaveBeenCalledWith(
       expect.objectContaining({ subject: expect.stringContaining('1 jour') }),
     );
-    expect((prisma.school.update as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+    expect(prisma.school.update as ReturnType<typeof vi.fn>).toHaveBeenCalledWith({
       where: { id: 'school-3' },
       data: { remindersSentDays: { push: 1 } },
     });
@@ -156,7 +168,12 @@ describe('sendSubscriptionReminders', () => {
     const now = new Date('2026-01-01T00:00:00Z');
     const prisma = makePrismaMock({
       trialingSchools: [
-        { id: 'school-6', name: 'École X', trialEndsAt: new Date('2026-01-05T00:00:00Z'), remindersSentDays: [] },
+        {
+          id: 'school-6',
+          name: 'École X',
+          trialEndsAt: new Date('2026-01-05T00:00:00Z'),
+          remindersSentDays: [],
+        },
       ],
     });
     const result = await sendSubscriptionReminders({ prisma, appUrl: 'https://app.test', now });

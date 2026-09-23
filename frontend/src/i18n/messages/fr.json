@@ -264,7 +264,6 @@
       "title": "Gérez votre école.\nSans papier, sans stress.",
       "subtitle": "ScolaGest est la plateforme tout-en-un pour les écoles : inscriptions, bulletins, paiements et emploi du temps, réunis dans un seul espace sécurisé.",
       "ctaPrimary": "Essayer gratuitement 14 jours",
-      "ctaSecondary": "Se connecter",
       "trust": "Aucune carte bancaire requise · Essai gratuit de 14 jours · Données isolées par établissement"
     },
     "heroPanel": {
@@ -324,8 +323,7 @@
     },
     "finalCta": {
       "title": "Prêt à simplifier la gestion de votre école ?",
-      "subtitle": "Créez votre compte en quelques minutes. 14 jours gratuits, sans carte bancaire.",
-      "cta": "Commencer gratuitement"
+      "subtitle": "Élèves, notes, finances et communication : tout ce dont votre école a besoin, réuni en un seul endroit."
     },
     "demoForm": {
       "title": "Demander une démo",
@@ -355,7 +353,7 @@
       "accountTitle": "Compte",
       "login": "Connexion",
       "signup": "Créer un compte",
-      "copyright": "© {year} ScolaGest — Fait pour les écoles de Guinée."
+      "copyright": "© ScolaGest — La gestion scolaire, simplifiée."
     }
   },
   "platform": {
