@@ -497,6 +497,21 @@
       "confirmRestore": "Restore this account?",
       "toggleError": "Something went wrong. Please try again.",
       "noneYet": "No users yet.",
+      "editMenus": "Edit access",
+      "edit": {
+        "pageTitle": "Edit access",
+        "backLink": "Back to users",
+        "roleLine": "Role: {role}",
+        "role": {
+          "DIRECTION": "Direction",
+          "TEACHER": "Teacher",
+          "STAFF": "Staff"
+        },
+        "noPickableMenus": "No extra menu available for this role.",
+        "menusHint": "On top of the menus this role always has access to.",
+        "coreMenusNote": "Always accessible for this role: {menus}",
+        "savedToast": "Access updated."
+      },
       "new": {
         "pageTitle": "Create a User",
         "backLink": "Back to users",
@@ -1004,7 +1019,8 @@
       "headerActions": "Actions",
       "coeffAbbrev": "coeff. {value}",
       "bulletinLink": "Report Card",
-      "footerClassAverage": "Class Average"
+      "footerClassAverage": "Class Average",
+      "validatedBadge": "Validated"
     },
     "enter": {
       "backLink": "GRADES & RESULTS",
@@ -1030,10 +1046,28 @@
       "errorNotFound": "Class or subject not found.",
       "errorForbidden": "This class or subject isn't accessible to you.",
       "errorTeacherNotLinked": "No teacher profile is linked to this account.",
+      "errorProofRequired": "A photo of the grade sheet is required before saving.",
+      "errorAlreadyValidated": "These grades were already validated. See the direction with the paper grade sheet for any correction.",
       "success": "Grades saved.",
       "back": "Back",
       "saving": "Saving…",
-      "save": "Save Grades"
+      "save": "Save Grades",
+      "proofLabel": "Grade sheet photo",
+      "proofHintRequired": "Take a photo of, or upload, the hand-filled paper grade sheet — required to validate grades.",
+      "proofHintOptional": "Take a photo of, or upload, the hand-filled paper grade sheet (optional).",
+      "proofChooseFile": "Choose a file",
+      "proofNoFileChosen": "No file chosen",
+      "proofCurrent": "Photo already saved",
+      "proofRemove": "Remove",
+      "proofAlt": "Grade sheet photo",
+      "errorProofTooLarge": "The photo is still too large even after compression. Try a simpler photo.",
+      "lockedTitle": "Grades already validated",
+      "lockedMessage": "These grades were validated on {date} by {name}. For any change, see the direction with the paper grade sheet as proof.",
+      "lockedMessageUnknownSubmitter": "These grades were validated on {date}. For any change, see the direction with the paper grade sheet as proof.",
+      "correctionBanner": "These grades were validated on {date} by {name}. As direction, you can correct them below.",
+      "correctionBannerUnknownSubmitter": "These grades were already validated on {date}. As direction, you can correct them below.",
+      "correctionNoteLabel": "Correction reason (optional)",
+      "correctionNotePlaceholder": "E.g. Data-entry mistake reported by the teacher, paper sheet checked."
     },
     "importPage": {
       "backLink": "GRADES & RESULTS",

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { Prisma } from '@prisma/client';
 import Link from 'next/link';
 import { getTranslations, getLocale } from 'next-intl/server';
 import Sidebar from '@/components/Sidebar';
@@ -93,8 +94,15 @@ export default async function GradesPage({
       })
     : [];
 
-  const grades = classId
-    ? await prisma.grade.findMany({
+  let grades: Prisma.GradeGetPayload<{ include: { subject: true } }>[] = [];
+  let validatedSubjectIds = new Set<string>();
+  if (classId) {
+    // Which subjects are locked (GradeSubmission) for this class/period/
+    // year is fetched alongside grades — shown as a small "Validé" badge
+    // next to the subject header so the direction can see progress at a
+    // glance.
+    const [gradesResult, submissions] = await Promise.all([
+      prisma.grade.findMany({
         where: {
           classId,
           periode,
@@ -102,8 +110,15 @@ export default async function GradesPage({
           ...(teacherSubjectIds ? { subjectId: { in: teacherSubjectIds } } : {}),
         },
         include: { subject: true },
-      })
-    : [];
+      }),
+      prisma.gradeSubmission.findMany({
+        where: { classId, periode, anneeScolaire },
+        select: { subjectId: true },
+      }),
+    ]);
+    grades = gradesResult;
+    validatedSubjectIds = new Set(submissions.map((s) => s.subjectId));
+  }
 
   const subjectMap = new Map<
     string,
@@ -343,7 +358,7 @@ export default async function GradesPage({
                           return (
                             <CardField
                               key={m.id}
-                              label={`${m.nom} (${t('coeffAbbrev', { value: m.coefficient })})`}
+                              label={`${m.nom}${validatedSubjectIds.has(m.id) ? ` ✓ ${t('validatedBadge')}` : ''} (${t('coeffAbbrev', { value: m.coefficient })})`}
                               value={
                                 <span className={noteColor(note, classNoteMax)}>
                                   {note !== null ? `${note}/${classNoteMax}` : '—'}
@@ -399,8 +414,16 @@ export default async function GradesPage({
                       </span>
                       {subjects.map((m) => (
                         <div key={m.id} className="text-center">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-center gap-1">
                             {m.nom}
+                            {validatedSubjectIds.has(m.id) && (
+                              <span
+                                title={t('validatedBadge')}
+                                className="text-success normal-case font-semibold"
+                              >
+                                ✓
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {t('coeffAbbrev', { value: m.coefficient })}

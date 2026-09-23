@@ -23,6 +23,7 @@ const USER_SELECT = {
   status: true,
   emailVerifiedAt: true,
   createdAt: true,
+  enabledMenus: true,
 } as const satisfies Prisma.UserSelect;
 
 export async function GET(

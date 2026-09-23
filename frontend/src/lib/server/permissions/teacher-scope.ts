@@ -44,9 +44,16 @@ export async function assertTeacherAssignment(
   classId: string,
   subjectId: string,
 ): Promise<boolean> {
+  // `select` must include `schoolId` — the tenant-scope Prisma extension
+  // (see prisma.ts's UNIQUE_READ_OPS handling) verifies a findUnique result
+  // belongs to the caller's school by reading `result.schoolId` off
+  // whatever this query actually returns; a `select` that omits it makes
+  // every row look cross-tenant and get silently nulled out, even a
+  // legitimately-owned one (this previously made every TEACHER-role grade
+  // submission fail with FORBIDDEN, unconditionally).
   const row = await prisma.teacherAssignment.findUnique({
     where: { teacherId_subjectId_classId: { teacherId, subjectId, classId } },
-    select: { id: true },
+    select: { id: true, schoolId: true },
   });
   return row !== null;
 }
@@ -73,9 +80,14 @@ export async function syncSubjectTeacherAssignments(
   schoolId: string,
   subjectId: string,
 ): Promise<{ unmatched: string[] }> {
+  // `select` must include `schoolId` — see the comment on
+  // `assertTeacherAssignment` above for why omitting it silently nulls out
+  // even a legitimately-owned row (this previously made every subject
+  // create/edit through the real API silently fail to sync
+  // TeacherAssignment, always short-circuiting to `unmatched: []`).
   const subject = await tx.subject.findUnique({
     where: { id: subjectId },
-    select: { teacherId: true, classesText: true },
+    select: { teacherId: true, classesText: true, schoolId: true },
   });
 
   await tx.teacherAssignment.deleteMany({ where: { subjectId } });

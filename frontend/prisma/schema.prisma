@@ -70,6 +70,8 @@ model User {
   recordedAbsences  Absence[]
   recordedTeacherAbsences TeacherAbsence[]
   recordedExpenses  Expense[]
+  gradeSubmissionsSubmitted GradeSubmission[] @relation("GradeSubmissionSubmittedBy")
+  gradeSubmissionsCorrected GradeSubmission[] @relation("GradeSubmissionCorrectedBy")
   // The student(s) this account can see, when role is PARENT — see
   // ParentStudent.
   parentLinks       ParentStudent[]
@@ -444,6 +446,7 @@ model School {
   subjects             Subject[]
   teacherAssignments   TeacherAssignment[]
   grades               Grade[]
+  gradeSubmissions     GradeSubmission[]
   scheduleEntries      ScheduleEntry[]
   revenuePayments      RevenuePayment[]
   expenses             Expense[]
@@ -518,6 +521,7 @@ model SchoolClass {
 
   students           Student[]
   grades             Grade[]
+  gradeSubmissions   GradeSubmission[]
   schedule           ScheduleEntry[]
   tuitionPlans       TuitionPlan[]
   teacherAssignments TeacherAssignment[]
@@ -931,6 +935,7 @@ model Subject {
   createdAt     DateTime @default(now())
 
   grades             Grade[]
+  gradeSubmissions   GradeSubmission[]
   scheduleEntries    ScheduleEntry[]
   teacherAssignments TeacherAssignment[]
 
@@ -992,6 +997,44 @@ model Grade {
 
   @@unique([studentId, subjectId, periode, anneeScolaire])
   @@index([classId, subjectId, periode, anneeScolaire])
+  @@index([schoolId])
+}
+
+// A locked, verified record that a batch of grades (one class + subject +
+// period + year) has been validated. Grade rows are one per student, but
+// the paper "fiche de note" a teacher fills covers a whole class/subject/
+// period at once, so the lock + photo proof apply at that batch level, not
+// per individual grade. A TEACHER can create this once per batch (see
+// POST /api/grades) — after that, the same POST rejects further edits from
+// that role, until a DIRECTION/ADMIN/SUPERADMIN account corrects it, which
+// updates correctedById/correctedAt/correctionNote here as an audit trail.
+model GradeSubmission {
+  id            String      @id @default(cuid())
+  schoolId      String
+  school        School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId       String
+  schoolClass   SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId     String
+  subject       Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  periode       String
+  anneeScolaire String
+  // Photo of the paper grade sheet, as a data URL — same approach as
+  // Expense.receiptUrl. Mandatory for a TEACHER submission, optional for a
+  // DIRECTION/ADMIN one — both enforced in the API, not the DB, since the
+  // requirement depends on who's saving, not on this table alone.
+  proofUrl      String?
+  submittedById String
+  submittedBy   User        @relation("GradeSubmissionSubmittedBy", fields: [submittedById], references: [id])
+  submittedAt   DateTime    @default(now())
+  // Set when DIRECTION/ADMIN corrects an already-submitted batch — records
+  // who overrode the lock and why (the paper grade sheet the teacher
+  // brought in, cross-checked in person).
+  correctedById  String?
+  correctedBy    User?     @relation("GradeSubmissionCorrectedBy", fields: [correctedById], references: [id], onDelete: SetNull)
+  correctedAt    DateTime?
+  correctionNote String?
+
+  @@unique([classId, subjectId, periode, anneeScolaire])
   @@index([schoolId])
 }
 

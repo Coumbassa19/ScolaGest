@@ -69,6 +69,7 @@ export default async function EnterGradesPage() {
             classes={classes.map((c) => ({ id: c.id, name: c.name, noteMax: c.cycle.noteMax }))}
             subjects={subjects}
             academicYears={academicYears.map((y) => y.label)}
+            role={staff.user.role}
           />
         )}
       </div>

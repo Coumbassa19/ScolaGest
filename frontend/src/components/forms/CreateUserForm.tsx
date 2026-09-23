@@ -28,7 +28,7 @@ export interface UnlinkedStaffOption {
   poste: string;
 }
 
-type StaffRole = 'DIRECTION' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'SUPERADMIN';
+export type StaffRole = 'DIRECTION' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'SUPERADMIN';
 
 interface CreateUserResponse {
   user: { id: string; email: string };
@@ -54,7 +54,9 @@ const ERROR_KEYS: Record<string, string> = {
 
 // The 10 school-domain menus map 1:1 onto Sidebar.tsx's navItems — reuse
 // its translation keys (namespace 'sidebar') instead of duplicating labels.
-const MENU_LABEL_KEY: Record<MenuKey, string> = {
+// Exported so EditUserMenusForm (editing an EXISTING account's menus) can
+// reuse the exact same lookup instead of duplicating it.
+export const MENU_LABEL_KEY: Record<MenuKey, string> = {
   dashboard: 'dashboard',
   students: 'studentsGroup',
   teachers: 'teachers',
@@ -67,7 +69,7 @@ const MENU_LABEL_KEY: Record<MenuKey, string> = {
   settings: 'settings',
 };
 
-function coreMenusFor(role: StaffRole): readonly MenuKey[] {
+export function coreMenusFor(role: StaffRole): readonly MenuKey[] {
   if (role === 'TEACHER') return TEACHER_CORE_MENUS;
   if (role === 'DIRECTION') return DIRECTION_CORE_MENUS;
   if (role === 'STAFF') return STAFF_CORE_MENUS;

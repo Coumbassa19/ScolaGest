@@ -147,6 +147,16 @@ export default async function SettingsPage() {
                           value={t(`users.${STAFF_ROLE_KEY[u.role] ?? 'roleTeacher'}`)}
                         />
                         <div className="pt-1.5 flex justify-end gap-4">
+                          {(u.role === 'DIRECTION' ||
+                            u.role === 'TEACHER' ||
+                            u.role === 'STAFF') && (
+                            <Link
+                              href={`/settings/users/${u.id}/edit`}
+                              className="text-sm font-semibold text-primary"
+                            >
+                              {t('users.editMenus')}
+                            </Link>
+                          )}
                           <UserStatusToggle userId={u.id} status={u.status} />
                         </div>
                       </>
@@ -193,7 +203,19 @@ export default async function SettingsPage() {
                           >
                             {u.status === 'ACTIVE' ? t('users.active') : t('users.suspended')}
                           </div>
-                          <UserStatusToggle userId={u.id} status={u.status} />
+                          <div className="flex items-center gap-4">
+                            {(u.role === 'DIRECTION' ||
+                              u.role === 'TEACHER' ||
+                              u.role === 'STAFF') && (
+                              <Link
+                                href={`/settings/users/${u.id}/edit`}
+                                className="text-sm font-semibold text-primary"
+                              >
+                                {t('users.editMenus')}
+                              </Link>
+                            )}
+                            <UserStatusToggle userId={u.id} status={u.status} />
+                          </div>
                         </div>
                       ))
                     )}

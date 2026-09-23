@@ -63,6 +63,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'Subject',
   'TeacherAssignment',
   'Grade',
+  'GradeSubmission',
   'ScheduleEntry',
   'RevenuePayment',
   'Expense',

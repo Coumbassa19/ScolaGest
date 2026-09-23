@@ -1,5 +1,7 @@
 // GET  /api/grades?classId=&periode= — list grades (with student + subject)
-//      for a class/period — used by /grades and /bulletin.
+//      for a class/period — used by /grades and /bulletin. Also returns
+//      `submissions` (see GradeSubmission below) for the same scope, so a
+//      client can tell which class/subject/period batches are locked.
 // POST /api/grades — bulk-save grades for one class/subject/period/year (the
 //      enter-grades form saves one row per student at once). Upserts on
 //      the (studentId, subjectId, periode, anneeScolaire) unique constraint
@@ -14,6 +16,17 @@
 // outside their assignments. POST always rejects a (classId, subjectId)
 // pair the teacher isn't assigned to — that's the hard boundary that
 // survives a crafted request regardless of what the UI ever renders.
+//
+// Anti-corruption lock (GradeSubmission): once a TEACHER saves grades for a
+// given (classId, subjectId, periode, anneeScolaire) batch, a mandatory
+// photo of the paper grade sheet is required and the batch is locked —
+// a further POST from that same TEACHER role is rejected outright
+// (GRADES_ALREADY_VALIDATED), regardless of who originally submitted it.
+// DIRECTION/ADMIN/SUPERADMIN (and STAFF granted the 'grades' menu) are
+// never blocked by the lock and can always correct a batch; doing so
+// records correctedById/correctedAt (and an optional correctionNote) on
+// the GradeSubmission row as an audit trail, without disturbing who
+// originally submitted it.
 //
 // `runtime = 'nodejs'` is required by the runtime-enforcement test
 // (frontend/src/lib/server/observability/runtime-enforcement.test.ts).
@@ -32,6 +45,11 @@ import {
   getTeacherSubjectIds,
   assertTeacherAssignment,
 } from '@/lib/server/permissions/teacher-scope';
+
+// Same 500KB-class ceiling as Expense.receiptUrl (see accounting/expenses),
+// slightly higher: a class grade sheet often has 30-40 rows of handwriting,
+// so it needs a bit more resolution to stay legible than a single receipt.
+const GRADE_PROOF_MAX_BYTES = 900_000;
 
 const Body = z.object({
   classId: zCuid,
@@ -52,6 +70,17 @@ const Body = z.object({
     )
     .min(1)
     .max(200),
+  // Photo of the paper grade sheet, as a data URL — mandatory for a
+  // TEACHER submission (checked imperatively below, since the requirement
+  // depends on role), optional for DIRECTION/ADMIN/STAFF.
+  proofUrl: z
+    .string()
+    .max(GRADE_PROOF_MAX_BYTES)
+    .refine((s) => s.startsWith('data:image/'), 'Invalid image data URL')
+    .optional()
+    .or(z.literal('')),
+  // Only meaningful when correcting an already-submitted batch.
+  correctionNote: z.string().trim().max(500).optional(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -88,18 +117,45 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const grades = await prisma.grade.findMany({
-      where: {
-        ...(classId ? { classId } : teacherClassIds ? { classId: { in: teacherClassIds } } : {}),
-        ...(periode ? { periode } : {}),
-        ...(studentId ? { studentId } : {}),
-        ...(anneeScolaire ? { anneeScolaire } : {}),
-        ...(teacherSubjectIds ? { subjectId: { in: teacherSubjectIds } } : {}),
-      },
-      include: { student: true, subject: true },
-      orderBy: [{ subject: { nom: 'asc' } }],
-    });
-    return NextResponse.json({ grades }, { headers: { 'x-request-id': ctx.requestId } });
+    const [grades, submissions] = await Promise.all([
+      prisma.grade.findMany({
+        where: {
+          ...(classId ? { classId } : teacherClassIds ? { classId: { in: teacherClassIds } } : {}),
+          ...(periode ? { periode } : {}),
+          ...(studentId ? { studentId } : {}),
+          ...(anneeScolaire ? { anneeScolaire } : {}),
+          ...(teacherSubjectIds ? { subjectId: { in: teacherSubjectIds } } : {}),
+        },
+        include: { student: true, subject: true },
+        orderBy: [{ subject: { nom: 'asc' } }],
+      }),
+      // Lock status for the same scope — lets a client (EnterGradesForm)
+      // tell which class/subject/period batches are already validated,
+      // without a second round trip. Not filtered by studentId: a
+      // submission is a batch-level record, unrelated to a single student.
+      prisma.gradeSubmission.findMany({
+        where: {
+          ...(classId ? { classId } : teacherClassIds ? { classId: { in: teacherClassIds } } : {}),
+          ...(periode ? { periode } : {}),
+          ...(anneeScolaire ? { anneeScolaire } : {}),
+          ...(teacherSubjectIds ? { subjectId: { in: teacherSubjectIds } } : {}),
+        },
+        select: {
+          id: true,
+          classId: true,
+          subjectId: true,
+          periode: true,
+          anneeScolaire: true,
+          submittedAt: true,
+          submittedBy: { select: { name: true, email: true } },
+          correctedAt: true,
+        },
+      }),
+    ]);
+    return NextResponse.json(
+      { grades, submissions },
+      { headers: { 'x-request-id': ctx.requestId } },
+    );
   });
 }
 
@@ -177,6 +233,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
+    const existingSubmission = await prisma.gradeSubmission.findUnique({
+      where: {
+        classId_subjectId_periode_anneeScolaire: { classId, subjectId, periode, anneeScolaire },
+      },
+    });
+
+    if (auth.user.role === 'TEACHER') {
+      if (!parsed.data.proofUrl) {
+        return NextResponse.json(
+          {
+            error: 'PROOF_REQUIRED',
+            message: 'A photo of the paper grade sheet is required to save grades.',
+          },
+          { status: 400, headers: { 'x-request-id': ctx.requestId } },
+        );
+      }
+      if (existingSubmission) {
+        return NextResponse.json(
+          {
+            error: 'GRADES_ALREADY_VALIDATED',
+            message: 'These grades were already validated. See the direction to correct them.',
+          },
+          { status: 403, headers: { 'x-request-id': ctx.requestId } },
+        );
+      }
+    }
+
     const grades = await prisma.$transaction(
       entries.map((entry) =>
         prisma.grade.upsert({
@@ -202,8 +285,35 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ),
     );
 
+    // Lock/audit-trail record for this batch — see the module header. A
+    // TEACHER only ever reaches this line on a first-ever save (a repeat
+    // was already rejected above), so `existingSubmission` here only
+    // happens for a DIRECTION/ADMIN/STAFF correction.
+    const submission = await prisma.gradeSubmission.upsert({
+      where: {
+        classId_subjectId_periode_anneeScolaire: { classId, subjectId, periode, anneeScolaire },
+      },
+      create: {
+        schoolId: requireSchoolId(auth.user.schoolId),
+        classId,
+        subjectId,
+        periode,
+        anneeScolaire,
+        proofUrl: parsed.data.proofUrl || null,
+        submittedById: auth.user.sub,
+      },
+      update: existingSubmission
+        ? {
+            ...(parsed.data.proofUrl ? { proofUrl: parsed.data.proofUrl } : {}),
+            correctedById: auth.user.sub,
+            correctedAt: new Date(),
+            ...(parsed.data.correctionNote ? { correctionNote: parsed.data.correctionNote } : {}),
+          }
+        : {},
+    });
+
     return NextResponse.json(
-      { grades, count: grades.length },
+      { grades, count: grades.length, submission },
       { status: 201, headers: { 'x-request-id': ctx.requestId } },
     );
   });
