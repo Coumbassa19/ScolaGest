@@ -18,10 +18,13 @@
 // survives a crafted request regardless of what the UI ever renders.
 //
 // Anti-corruption lock (GradeSubmission): once a TEACHER saves grades for a
-// given (classId, subjectId, periode, anneeScolaire) batch, a mandatory
-// photo of the paper grade sheet is required and the batch is locked —
+// given (classId, subjectId, periode, anneeScolaire) batch, it is locked —
 // a further POST from that same TEACHER role is rejected outright
 // (GRADES_ALREADY_VALIDATED), regardless of who originally submitted it.
+// The paper grade sheet itself is the proof: a teacher who needs a
+// correction brings it in person to the direction (no digital photo is
+// captured — a class roster commonly spans several physical sheets, which
+// a single mandatory upload can't represent anyway).
 // DIRECTION/ADMIN/SUPERADMIN (and STAFF granted the 'grades' menu) are
 // never blocked by the lock and can always correct a batch; doing so
 // records correctedById/correctedAt (and an optional correctionNote) on
@@ -46,11 +49,6 @@ import {
   assertTeacherAssignment,
 } from '@/lib/server/permissions/teacher-scope';
 
-// Same 500KB-class ceiling as Expense.receiptUrl (see accounting/expenses),
-// slightly higher: a class grade sheet often has 30-40 rows of handwriting,
-// so it needs a bit more resolution to stay legible than a single receipt.
-const GRADE_PROOF_MAX_BYTES = 900_000;
-
 const Body = z.object({
   classId: zCuid,
   subjectId: zCuid,
@@ -70,15 +68,6 @@ const Body = z.object({
     )
     .min(1)
     .max(200),
-  // Photo of the paper grade sheet, as a data URL — mandatory for a
-  // TEACHER submission (checked imperatively below, since the requirement
-  // depends on role), optional for DIRECTION/ADMIN/STAFF.
-  proofUrl: z
-    .string()
-    .max(GRADE_PROOF_MAX_BYTES)
-    .refine((s) => s.startsWith('data:image/'), 'Invalid image data URL')
-    .optional()
-    .or(z.literal('')),
   // Only meaningful when correcting an already-submitted batch.
   correctionNote: z.string().trim().max(500).optional(),
 });
@@ -240,15 +229,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
 
     if (auth.user.role === 'TEACHER') {
-      if (!parsed.data.proofUrl) {
-        return NextResponse.json(
-          {
-            error: 'PROOF_REQUIRED',
-            message: 'A photo of the paper grade sheet is required to save grades.',
-          },
-          { status: 400, headers: { 'x-request-id': ctx.requestId } },
-        );
-      }
       if (existingSubmission) {
         return NextResponse.json(
           {
@@ -299,12 +279,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         subjectId,
         periode,
         anneeScolaire,
-        proofUrl: parsed.data.proofUrl || null,
         submittedById: auth.user.sub,
       },
       update: existingSubmission
         ? {
-            ...(parsed.data.proofUrl ? { proofUrl: parsed.data.proofUrl } : {}),
             correctedById: auth.user.sub,
             correctedAt: new Date(),
             ...(parsed.data.correctionNote ? { correctionNote: parsed.data.correctionNote } : {}),

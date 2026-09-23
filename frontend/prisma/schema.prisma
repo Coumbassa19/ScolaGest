@@ -1018,11 +1018,6 @@ model GradeSubmission {
   subject       Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   periode       String
   anneeScolaire String
-  // Photo of the paper grade sheet, as a data URL — same approach as
-  // Expense.receiptUrl. Mandatory for a TEACHER submission, optional for a
-  // DIRECTION/ADMIN one — both enforced in the API, not the DB, since the
-  // requirement depends on who's saving, not on this table alone.
-  proofUrl      String?
   submittedById String
   submittedBy   User        @relation("GradeSubmissionSubmittedBy", fields: [submittedById], references: [id])
   submittedAt   DateTime    @default(now())

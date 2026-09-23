@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -49,46 +49,6 @@ const PERIODE_VALUES = ['T1', 'T2', 'T3'] as const;
 
 const gridCols = { gridTemplateColumns: '2fr 1fr' };
 
-// Same ceiling as the server's GRADE_PROOF_MAX_BYTES (see /api/grades) —
-// checked again client-side after resizing so a still-too-large photo is
-// caught before the request round-trips.
-const MAX_PROOF_BYTES = 900_000;
-const MAX_PROOF_WIDTH = 1400;
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-function loadImage(dataUrl: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('image load failed'));
-    img.src = dataUrl;
-  });
-}
-
-// A grade sheet photo needs to stay legible with 30-40 rows of handwriting,
-// so it's downscaled (not just capped) rather than rejected outright —
-// most phone camera photos are several MB and would never fit otherwise.
-async function resizeProofImage(file: File): Promise<string> {
-  const original = await readFileAsDataUrl(file);
-  const img = await loadImage(original);
-  const scale = Math.min(1, MAX_PROOF_WIDTH / img.width);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(img.width * scale));
-  canvas.height = Math.max(1, Math.round(img.height * scale));
-  const context = canvas.getContext('2d');
-  if (!context) return original;
-  context.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.72);
-}
-
 // Maps the stable `error` codes POST /api/grades can return to the matching
 // translation key in `grades.enterForm`, so a server error always reads in
 // the app's current language instead of leaking the raw string the route
@@ -101,7 +61,6 @@ const ERROR_KEYS: Record<string, string> = {
   NOT_FOUND: 'errorNotFound',
   FORBIDDEN: 'errorForbidden',
   TEACHER_NOT_LINKED: 'errorTeacherNotLinked',
-  PROOF_REQUIRED: 'errorProofRequired',
   GRADES_ALREADY_VALIDATED: 'errorAlreadyValidated',
 };
 
@@ -130,8 +89,6 @@ export default function EnterGradesForm({
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
-  const [proofUrl, setProofUrl] = useState('');
-  const [proofFileName, setProofFileName] = useState('');
   const [correctionNote, setCorrectionNote] = useState('');
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -178,8 +135,6 @@ export default function EnterGradesForm({
         for (const g of forSubject) next[g.studentId] = String(g.valeur);
         setNotes(next);
         setSubmissions(data.submissions);
-        setProofUrl('');
-        setProofFileName('');
         setCorrectionNote('');
       })
       .catch(() => {
@@ -213,29 +168,6 @@ export default function EnterGradesForm({
     return new Date(s.submittedAt).toLocaleDateString();
   }
 
-  async function onProofChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setError(null);
-    try {
-      const resized = await resizeProofImage(file);
-      const approxBytes = Math.round((resized.length * 3) / 4);
-      if (approxBytes > MAX_PROOF_BYTES) {
-        setError(t('errorProofTooLarge'));
-        return;
-      }
-      setProofUrl(resized);
-      setProofFileName(file.name);
-    } catch {
-      setError(t('errorProofTooLarge'));
-    }
-  }
-
-  function onRemoveProof() {
-    setProofUrl('');
-    setProofFileName('');
-  }
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -258,10 +190,6 @@ export default function EnterGradesForm({
       setError(t('errorGradeRange', { max: noteMax }));
       return;
     }
-    if (isTeacher && !proofUrl) {
-      setError(t('errorProofRequired'));
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -273,7 +201,6 @@ export default function EnterGradesForm({
           periode,
           anneeScolaire,
           entries,
-          ...(proofUrl ? { proofUrl } : {}),
           ...(isCorrectionMode && correctionNote.trim()
             ? { correctionNote: correctionNote.trim() }
             : {}),
@@ -461,48 +388,6 @@ export default function EnterGradesForm({
             </div>
           </div>
         </div>
-
-        {!isLocked && (
-          <div className="mt-4">
-            <label className="block text-sm font-semibold text-foreground mb-2">
-              {t('proofLabel')}
-            </label>
-            <div className="border border-border rounded-md px-3 py-2 bg-input flex items-center gap-3">
-              {proofUrl && (
-                // data: URL — next/image can't optimize it, a plain <img> is correct here.
-                <img
-                  src={proofUrl}
-                  alt={t('proofAlt')}
-                  className="w-10 h-10 rounded-md object-cover border border-border flex-shrink-0"
-                />
-              )}
-              <label className="px-3 py-1.5 text-xs font-semibold text-foreground border border-border rounded-md bg-surface cursor-pointer shrink-0">
-                {t('proofChooseFile')}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => void onProofChange(e)}
-                  className="hidden"
-                />
-              </label>
-              <span className="text-sm text-muted-foreground truncate">
-                {proofFileName || (proofUrl ? t('proofCurrent') : t('proofNoFileChosen'))}
-              </span>
-              {proofUrl && (
-                <button
-                  type="button"
-                  onClick={onRemoveProof}
-                  className="text-xs font-semibold text-danger shrink-0 ml-auto"
-                >
-                  {t('proofRemove')}
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {isTeacher ? t('proofHintRequired') : t('proofHintOptional')}
-            </p>
-          </div>
-        )}
 
         {isCorrectionMode && (
           <div className="mt-4">
