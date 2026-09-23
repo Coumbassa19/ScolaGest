@@ -29,7 +29,7 @@ import { createWebhookHandler } from '@/lib/server/webhook/handler';
 import { monerooWebhookProvider } from '@/lib/server/webhook/moneroo';
 import { enqueueOutbox } from '@/lib/server/outbox';
 import { prisma } from '@/lib/server/prisma';
-import { SUBSCRIPTION_PERIOD_MS } from '@/lib/server/billing/constants';
+import { planPeriodMs } from '@/lib/server/billing/constants';
 
 export const POST = createWebhookHandler({
   prisma,
@@ -88,7 +88,7 @@ export const POST = createWebhookHandler({
 
     const school = await tx.school.findUnique({
       where: { id: subscriptionPayment.schoolId },
-      select: { currentPeriodEnd: true },
+      select: { plan: true, currentPeriodEnd: true },
     });
     const now = new Date();
     // Extend from the later of "now" and the current period end, so paying
@@ -96,7 +96,7 @@ export const POST = createWebhookHandler({
     // top instead of wasting the remaining days.
     const periodStart =
       school?.currentPeriodEnd && school.currentPeriodEnd > now ? school.currentPeriodEnd : now;
-    const periodEnd = new Date(periodStart.getTime() + SUBSCRIPTION_PERIOD_MS);
+    const periodEnd = new Date(periodStart.getTime() + planPeriodMs(school?.plan ?? 'CROISSANCE'));
 
     await tx.schoolSubscriptionPayment.update({
       where: { id: subscriptionPayment.id },

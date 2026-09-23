@@ -186,6 +186,9 @@
       "planChange": "Changer",
       "planEssentielName": "Forfait Essentiel",
       "planCroissanceName": "Forfait Croissance",
+      "planFlexibleName": "Forfait Flexible",
+      "perYear": "/an",
+      "perQuarter": "/trimestre",
       "name": "Votre nom complet",
       "schoolName": "Nom de l'établissement",
       "email": "Email",
@@ -289,8 +292,9 @@
     },
     "pricing": {
       "title": "Un tarif adapté à la taille de votre école",
-      "subtitle": "Deux forfaits, toutes les fonctionnalités incluses — choisissez selon le nombre d'élèves.",
+      "subtitle": "Trois forfaits, toutes les fonctionnalités incluses — choisissez selon vos besoins.",
       "pricePeriod": "/ an",
+      "pricePeriodQuarterly": "/ trimestre",
       "trialNote": "14 jours d'essai gratuit — aucune carte bancaire requise",
       "mostPopular": "Le plus populaire",
       "feature1": "Bulletins personnalisés avec votre logo",
@@ -304,6 +308,12 @@
         "tagline": "Idéal pour les petites écoles, notamment le primaire",
         "studentLimit": "Jusqu'à 700 élèves",
         "cta": "Commencer avec l'Essentiel"
+      },
+      "flexible": {
+        "name": "Forfait Flexible",
+        "tagline": "Idéal pour commencer sans engager toute une année d'un coup",
+        "studentLimit": "Élèves illimités",
+        "cta": "Commencer avec Flexible"
       },
       "croissance": {
         "name": "Forfait Croissance",
@@ -368,6 +378,7 @@
     "statusPastDue": "En retard",
     "planEssentiel": "Essentiel",
     "planCroissance": "Croissance",
+    "planFlexible": "Flexible",
     "noSchools": "Aucune école inscrite pour le moment.",
     "usersCount": "{count} compte(s)",
     "kpiRevenue": "Revenus collectés"
@@ -383,6 +394,7 @@
     "blockedMessage": "L'accès à votre espace est actuellement bloqué. Payez pour réactiver l'accès de votre établissement.",
     "planNameEssentiel": "Forfait Essentiel — jusqu'à 700 élèves",
     "planNameCroissance": "Forfait Croissance — élèves illimités",
+    "planNameFlexible": "Forfait Flexible — élèves illimités, trimestriel",
     "payButton": "Payer maintenant",
     "paying": "Redirection vers le paiement…",
     "paidBanner": "Paiement en cours de confirmation — la page se mettra à jour dès réception.",

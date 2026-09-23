@@ -30,12 +30,19 @@ describe('getStudentCapacity', () => {
     const prisma = makePrismaMock('CROISSANCE', 5000);
     const capacity = await getStudentCapacity(prisma, 'school-1');
     expect(capacity).toEqual({ limit: null, current: 0, remaining: Infinity });
-    expect((prisma.student.count as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(prisma.student.count as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('defaults to unlimited (CROISSANCE) when the school or its plan is missing/invalid', async () => {
     const prisma = makePrismaMock(null, 0);
     const capacity = await getStudentCapacity(prisma, 'missing-school');
     expect(capacity).toEqual({ limit: null, current: 0, remaining: Infinity });
+  });
+
+  it('is unlimited for a FLEXIBLE school and never counts students', async () => {
+    const prisma = makePrismaMock('FLEXIBLE', 5000);
+    const capacity = await getStudentCapacity(prisma, 'school-1');
+    expect(capacity).toEqual({ limit: null, current: 0, remaining: Infinity });
+    expect(prisma.student.count as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 });

@@ -200,6 +200,9 @@
       "planChange": "Change",
       "planEssentielName": "Essential plan",
       "planCroissanceName": "Growth plan",
+      "planFlexibleName": "Flexible plan",
+      "perYear": "/year",
+      "perQuarter": "/quarter",
       "name": "Your full name",
       "schoolName": "School name",
       "email": "Email",
@@ -303,8 +306,9 @@
     },
     "pricing": {
       "title": "A price that fits your school's size",
-      "subtitle": "Two plans, every feature included — pick the one that matches your student count.",
+      "subtitle": "Three plans, every feature included — pick the one that matches your needs.",
       "pricePeriod": "/ year",
+      "pricePeriodQuarterly": "/ quarter",
       "trialNote": "14-day free trial — no credit card required",
       "mostPopular": "Most popular",
       "feature1": "Custom report cards with your logo",
@@ -318,6 +322,12 @@
         "tagline": "Ideal for small schools, especially primary-only",
         "studentLimit": "Up to 700 students",
         "cta": "Start with Essential"
+      },
+      "flexible": {
+        "name": "Flexible plan",
+        "tagline": "Ideal for starting out without committing to a full year",
+        "studentLimit": "Unlimited students",
+        "cta": "Start with Flexible"
       },
       "croissance": {
         "name": "Growth plan",
@@ -382,6 +392,7 @@
     "statusPastDue": "Past due",
     "planEssentiel": "Essential",
     "planCroissance": "Growth",
+    "planFlexible": "Flexible",
     "noSchools": "No schools signed up yet.",
     "usersCount": "{count} account(s)",
     "kpiRevenue": "Revenue collected"
@@ -397,6 +408,7 @@
     "blockedMessage": "Access to your workspace is currently blocked. Pay to restore your school's access.",
     "planNameEssentiel": "Essential plan — up to 700 students",
     "planNameCroissance": "Growth plan — unlimited students",
+    "planNameFlexible": "Flexible plan — unlimited students, quarterly",
     "payButton": "Pay now",
     "paying": "Redirecting to payment…",
     "paidBanner": "Payment is being confirmed — this page will update once it's received.",

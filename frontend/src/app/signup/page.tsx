@@ -11,7 +11,12 @@ import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import PasswordInput from '@/components/forms/PasswordInput';
-import { PLAN_CROISSANCE, isSchoolPlan, PLANS, type SchoolPlan } from '@/lib/server/billing/constants';
+import {
+  PLAN_CROISSANCE,
+  isSchoolPlan,
+  PLANS,
+  type SchoolPlan,
+} from '@/lib/server/billing/constants';
 import { formatPrice } from '@/lib/utils';
 
 const PASSWORD_MIN = 7; // mirrors AUTH_PASSWORD_MIN_LENGTH default (see .env.local)
@@ -37,6 +42,13 @@ const ERROR_KEYS: Record<string, string> = {
 const PLAN_NAME_KEY: Record<SchoolPlan, string> = {
   ESSENTIEL: 'signup.planEssentielName',
   CROISSANCE: 'signup.planCroissanceName',
+  FLEXIBLE: 'signup.planFlexibleName',
+};
+
+const PLAN_PERIOD_KEY: Record<SchoolPlan, 'signup.perYear' | 'signup.perQuarter'> = {
+  ESSENTIEL: 'signup.perYear',
+  CROISSANCE: 'signup.perYear',
+  FLEXIBLE: 'signup.perQuarter',
 };
 
 function SignupForm() {
@@ -101,10 +113,14 @@ function SignupForm() {
         <div>
           <p className="text-xs text-muted-foreground">{t('signup.planSelected')}</p>
           <p className="text-sm font-semibold text-foreground">
-            {t(PLAN_NAME_KEY[plan] as never)} — {formatPrice(planPrice, 'GNF')}/an
+            {t(PLAN_NAME_KEY[plan] as never)} — {formatPrice(planPrice, 'GNF')}
+            {t(PLAN_PERIOD_KEY[plan])}
           </p>
         </div>
-        <Link href="/#pricing" className="text-xs font-semibold text-primary underline whitespace-nowrap">
+        <Link
+          href="/#pricing"
+          className="text-xs font-semibold text-primary underline whitespace-nowrap"
+        >
           {t('signup.planChange')}
         </Link>
       </div>

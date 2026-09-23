@@ -167,7 +167,12 @@ export default async function PlatformSchoolsPage() {
                     {schools.map((school) => {
                       const style = STATUS_STYLES[school.status] ?? STATUS_STYLES.TRIALING!;
                       const labelKey = STATUS_LABEL_KEY[school.status] ?? 'statusTrialing';
-                      const planLabelKey = school.plan === 'ESSENTIEL' ? 'planEssentiel' : 'planCroissance';
+                      const planLabelKey =
+                        school.plan === 'ESSENTIEL'
+                          ? 'planEssentiel'
+                          : school.plan === 'FLEXIBLE'
+                            ? 'planFlexible'
+                            : 'planCroissance';
                       const periodEnd =
                         school.status === 'TRIALING' ? school.trialEndsAt : school.currentPeriodEnd;
                       return (
@@ -175,7 +180,9 @@ export default async function PlatformSchoolsPage() {
                           key={school.id}
                           className="grid grid-cols-6 gap-4 px-5 py-3 border-b border-border last:border-b-0 items-center"
                         >
-                          <span className="text-sm font-semibold text-foreground">{school.name}</span>
+                          <span className="text-sm font-semibold text-foreground">
+                            {school.name}
+                          </span>
                           <span>
                             <span
                               className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${style.bg} ${style.text}`}
@@ -183,7 +190,9 @@ export default async function PlatformSchoolsPage() {
                               {t(labelKey as never)}
                             </span>
                           </span>
-                          <span className="text-sm text-muted-foreground">{t(planLabelKey as never)}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {t(planLabelKey as never)}
+                          </span>
                           <span className="text-sm text-muted-foreground">
                             {t('usersCount', { count: school._count.users })}
                           </span>

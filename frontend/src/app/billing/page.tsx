@@ -44,8 +44,22 @@ export default async function BillingPage({
 
   const isBlocked = school ? isSchoolAccessBlocked(school) : false;
   const initialBanner = sp.paid ? 'paid' : sp.failed ? 'failed' : null;
-  const planName = t(school?.plan === 'ESSENTIEL' ? 'planNameEssentiel' : 'planNameCroissance');
-  const priceLabel = `${formatPrice(plan.priceGNF, 'GNF')} / ${locale === 'en' ? 'year' : 'an'}`;
+  const planNameKey =
+    school?.plan === 'ESSENTIEL'
+      ? 'planNameEssentiel'
+      : school?.plan === 'FLEXIBLE'
+        ? 'planNameFlexible'
+        : 'planNameCroissance';
+  const planName = t(planNameKey);
+  const periodLabel =
+    school?.plan === 'FLEXIBLE'
+      ? locale === 'en'
+        ? 'quarter'
+        : 'trimestre'
+      : locale === 'en'
+        ? 'year'
+        : 'an';
+  const priceLabel = `${formatPrice(plan.priceGNF, 'GNF')} / ${periodLabel}`;
 
   return (
     <div className="flex flex-col md:flex-row bg-background min-h-full font-body">
