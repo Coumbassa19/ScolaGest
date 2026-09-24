@@ -50,6 +50,7 @@ const ERROR_KEYS: Record<string, string> = {
   SUPERADMIN_REQUIRED: 'errorSuperadminRequired',
   TEACHER_ID_REQUIRED: 'errorTeacherRequired',
   STAFF_ID_REQUIRED: 'errorStaffRequired',
+  NAME_REQUIRED: 'errorNameRequired',
 };
 
 // The 11 school-domain menus map 1:1 onto Sidebar.tsx's navItems — reuse
@@ -126,6 +127,10 @@ export default function CreateUserForm({
       setError(t('errorStaffRequired'));
       return;
     }
+    if (role === 'DIRECTION' && !name.trim()) {
+      setError(t('errorNameRequired'));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -160,7 +165,7 @@ export default function CreateUserForm({
         <p className="text-sm text-foreground mb-4">
           {result.emailStatus === 'SENT'
             ? t('successEmailSent', { email: result.user.email })
-            : t('successEmailFailed', { reason: result.emailError ?? result.emailStatus })}
+            : t('successEmailFailed')}
         </p>
 
         <div className="mb-6">
@@ -220,15 +225,20 @@ export default function CreateUserForm({
           </div>
           <div>
             <label className="block text-sm font-semibold text-foreground mb-2">
-              {t('nameLabel')}
+              {role === 'DIRECTION' ? t('nameLabelRequired') : t('nameLabel')}
+              {role === 'DIRECTION' && <span className="text-danger"> *</span>}
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('namePlaceholder')}
+              required={role === 'DIRECTION'}
               className={fieldClass}
             />
+            {role === 'DIRECTION' && (
+              <p className="text-xs text-muted-foreground mt-1">{t('nameHintRequired')}</p>
+            )}
           </div>
         </div>
 

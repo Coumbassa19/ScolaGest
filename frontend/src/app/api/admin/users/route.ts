@@ -185,6 +185,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
+    // Unlike TEACHER/STAFF, a DIRECTION account isn't linked to an HR row
+    // (see teacherId/staffId above) — `name` is the only thing that lets
+    // the admin tell DIRECTION accounts apart in the users list, so it's
+    // mandatory here even though the column stays optional for other roles.
+    if (data.role === 'DIRECTION' && !data.name?.trim()) {
+      return NextResponse.json(
+        {
+          error: 'NAME_REQUIRED',
+          message: 'A full name is required for a Direction account.',
+        },
+        { status: 400, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
 
     if (!auth.admin.schoolId) {
       return NextResponse.json(
