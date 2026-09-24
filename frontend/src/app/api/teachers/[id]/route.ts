@@ -80,6 +80,35 @@ export async function PATCH(
     }
     const data = parsed.data;
 
+    // A partial PATCH doesn't see the full picture on its own — merge with
+    // the existing row before checking the same "VACATAIRE needs a taux
+    // horaire" invariant POST /api/teachers enforces, so e.g. switching an
+    // existing teacher to VACATAIRE without ever setting a rate is still
+    // caught (leaving it unset silently computes a 0 GNF salary at payment
+    // time instead of erroring).
+    const existing = await prisma.teacher.findUnique({
+      where: { id },
+      select: { statut: true, tauxHoraire: true },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'TEACHER_NOT_FOUND', message: 'Enseignant introuvable' },
+        { status: 404, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
+    const effectiveStatut = data.statut ?? existing.statut;
+    const effectiveTauxHoraire =
+      data.tauxHoraire !== undefined ? data.tauxHoraire : existing.tauxHoraire;
+    if (effectiveStatut === 'VACATAIRE' && !(effectiveTauxHoraire && effectiveTauxHoraire > 0)) {
+      return NextResponse.json(
+        {
+          error: 'HOURLY_RATE_REQUIRED',
+          message: 'Hourly rate is required for a VACATAIRE teacher.',
+        },
+        { status: 400, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
+
     try {
       const teacher = await prisma.teacher.update({
         where: { id },

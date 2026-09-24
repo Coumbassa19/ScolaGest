@@ -68,6 +68,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
     const data = parsed.data;
+    // A VACATAIRE teacher is paid taux horaire × heures réelles de l'emploi
+    // du temps (see Comptabilité > Paiement des enseignants) — leaving this
+    // unset doesn't error there, it silently computes a 0 GNF salary. Caught
+    // here instead of discovered at payment time.
+    if (data.statut === 'VACATAIRE' && !(data.tauxHoraire && data.tauxHoraire > 0)) {
+      return NextResponse.json(
+        {
+          error: 'HOURLY_RATE_REQUIRED',
+          message: 'Hourly rate is required for a VACATAIRE teacher.',
+        },
+        { status: 400, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
     const teacher = await prisma.teacher.create({
       data: {
         schoolId: requireSchoolId(auth.user.schoolId),

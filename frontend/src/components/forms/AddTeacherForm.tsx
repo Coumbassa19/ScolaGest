@@ -28,6 +28,7 @@ type StatutValue = 'TEMPS_PLEIN' | 'VACATAIRE';
 // other unexpected code.
 const ERROR_KEYS: Record<string, string> = {
   TEACHER_NOT_FOUND: 'errorTeacherNotFound',
+  HOURLY_RATE_REQUIRED: 'errorHourlyRateRequired',
 };
 
 export default function AddTeacherForm({
@@ -57,6 +58,14 @@ export default function AddTeacherForm({
     setError(null);
     if (!nom.trim() || !prenom.trim()) {
       setError(t('errorNameRequired'));
+      return;
+    }
+    // A VACATAIRE teacher is paid taux horaire × heures réelles de l'emploi
+    // du temps — leaving this unset doesn't error at payment time, it
+    // silently computes a 0 GNF salary. Caught here instead (mirrored
+    // server-side in POST/PATCH /api/teachers).
+    if (statut === 'VACATAIRE' && !(tauxHoraire.trim() && Number(tauxHoraire) > 0)) {
+      setError(t('errorHourlyRateRequired'));
       return;
     }
     setSubmitting(true);
@@ -186,17 +195,21 @@ export default function AddTeacherForm({
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
                 {t('hourlyRateLabel')}
+                {statut === 'VACATAIRE' && <span className="text-danger"> *</span>}
               </label>
               <input
                 type="number"
-                min={0}
+                min={1}
                 inputMode="numeric"
                 value={tauxHoraire}
                 onChange={(e) => setTauxHoraire(e.target.value)}
                 placeholder={t('hourlyRatePlaceholder')}
+                required={statut === 'VACATAIRE'}
                 className={fieldClass}
               />
-              <p className="text-xs text-muted-foreground mt-1">{t('hourlyRateHint')}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {statut === 'VACATAIRE' ? t('hourlyRateHintRequired') : t('hourlyRateHint')}
+              </p>
             </div>
           </div>
         </div>
