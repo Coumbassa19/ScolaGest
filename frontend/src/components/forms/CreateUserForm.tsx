@@ -52,7 +52,7 @@ const ERROR_KEYS: Record<string, string> = {
   STAFF_ID_REQUIRED: 'errorStaffRequired',
 };
 
-// The 10 school-domain menus map 1:1 onto Sidebar.tsx's navItems — reuse
+// The 11 school-domain menus map 1:1 onto Sidebar.tsx's navItems — reuse
 // its translation keys (namespace 'sidebar') instead of duplicating labels.
 // Exported so EditUserMenusForm (editing an EXISTING account's menus) can
 // reuse the exact same lookup instead of duplicating it.
@@ -65,6 +65,7 @@ export const MENU_LABEL_KEY: Record<MenuKey, string> = {
   grades: 'grades',
   accounting: 'accountingGroup',
   absences: 'absences',
+  staff: 'staff',
   messages: 'messagesGroup',
   settings: 'settings',
 };

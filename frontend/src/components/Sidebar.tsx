@@ -85,6 +85,7 @@ const navItems: NavItem[] = [
     ],
   },
   { key: 'absences', icon: 'user-x', labelKey: 'absences', href: '/absences' },
+  { key: 'staff', icon: 'user-cog', labelKey: 'staff', href: '/staff' },
   {
     key: 'messages',
     icon: 'message-square',

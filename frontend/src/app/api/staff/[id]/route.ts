@@ -1,13 +1,15 @@
-// PATCH  /api/staff/[id] — partial update of a personnel record (used by the
+// PATCH  /api/staff/[id] — partial update of a personnel record. Reached
+//        from two places with two different menu gates: the "Personnel"
+//        section's edit page (/staff/[id], menu 'staff') and the
 //        inline-editable "Salaire mensuel" cell on Comptabilité > Paiement
-//        des personnels).
+//        des personnels (menu 'accounting') — so this accepts EITHER menu
+//        rather than requireStaff's single menuKey.
 // DELETE /api/staff/[id] — removes a personnel record. StaffPayment.staffId
 //        uses onDelete: Cascade, so this also removes their payment history
 //        — appropriate here since, unlike a teacher, a Staff row with no
 //        payment history is almost certainly a mistaken entry being
-//        corrected, not a real employee record to preserve.
-//        Both gated to the same 'accounting' menu as their creation (see
-//        POST /api/staff).
+//        corrected, not a real employee record to preserve. Only reached
+//        from the "Personnel" section, so gated to 'staff' alone.
 //
 // `runtime = 'nodejs'` is required by the runtime-enforcement test
 // (frontend/src/lib/server/observability/runtime-enforcement.test.ts).
@@ -18,6 +20,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { verifyCsrf } from '@/lib/server/auth';
 import { requireStaff } from '@/lib/server/middleware/require-staff';
+import { canAccessMenu } from '@/lib/server/permissions/menu-keys';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 
 const Body = z.object({
@@ -38,8 +41,17 @@ export async function PATCH(
     const csrfFail = verifyCsrf(req);
     if (csrfFail) return csrfFail;
 
-    const auth = await requireStaff({ menuKey: 'accounting' });
+    const auth = await requireStaff();
     if (auth instanceof NextResponse) return auth;
+    if (
+      !canAccessMenu(auth.user.role, auth.user.enabledMenus, 'staff') &&
+      !canAccessMenu(auth.user.role, auth.user.enabledMenus, 'accounting')
+    ) {
+      return NextResponse.json(
+        { error: 'MENU_NOT_ENABLED', message: 'You do not have access to this section.' },
+        { status: 403, headers: { 'x-request-id': ctx.requestId } },
+      );
+    }
     const prisma = auth.user.prisma;
 
     const { id } = await params;
@@ -92,7 +104,7 @@ export async function DELETE(
     const csrfFail = verifyCsrf(req);
     if (csrfFail) return csrfFail;
 
-    const auth = await requireStaff({ menuKey: 'accounting' });
+    const auth = await requireStaff({ menuKey: 'staff' });
     if (auth instanceof NextResponse) return auth;
     const prisma = auth.user.prisma;
 

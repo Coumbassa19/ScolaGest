@@ -53,6 +53,7 @@
     "accountingExpenses": "Expenses",
     "accountingSalaryAdvances": "Salary Advances",
     "absences": "Absences",
+    "staff": "Staff",
     "messagesGroup": "Messages",
     "messagesNew": "New Message",
     "messagesHistory": "History",
@@ -867,6 +868,59 @@
       "add": "Add"
     }
   },
+  "staff": {
+    "list": {
+      "title": "Staff",
+      "subtitle": "Register and manage your school's non-teaching staff",
+      "totalStaff": "Total Staff",
+      "totalStaffTrend": "Registered staff",
+      "monthlyPayroll": "Monthly Payroll",
+      "monthlyPayrollTrend": "Combined salaries / month",
+      "listTitle": "Staff List",
+      "addStaff": "+ Add",
+      "headerName": "Name",
+      "headerPoste": "Position",
+      "headerContact": "Contact",
+      "headerSalary": "Monthly Salary",
+      "headerActions": "Actions",
+      "noMatch": "No staff member matches \"{query}\".",
+      "noneYet": "No staff registered yet.",
+      "confirmDelete": "Remove {name} from staff?"
+    },
+    "detail": {
+      "backLink": "STAFF"
+    },
+    "add": {
+      "backLink": "STAFF",
+      "title": "Add a New Staff Member"
+    },
+    "form": {
+      "personalInfoTitle": "Personal Information",
+      "basicDataSubtitle": "Basic details for the staff member",
+      "lastNameLabel": "Surname:",
+      "lastNamePlaceholder": "e.g. Camara",
+      "firstNameLabel": "First Name:",
+      "firstNamePlaceholder": "e.g. Fatoumata",
+      "posteLabel": "Position:",
+      "postePlaceholder": "e.g. Supervisor, Accountant, Caretaker...",
+      "emailLabel": "Email:",
+      "emailPlaceholder": "e.g. fatoumata@example.com",
+      "phoneLabel": "Telephone:",
+      "phonePlaceholder": "e.g. 621 234 567",
+      "payTitle": "Pay",
+      "paySubtitle": "Determines the amount used on Accounting > Staff Payments",
+      "salaryLabel": "Monthly salary (GNF):",
+      "salaryPlaceholder": "e.g. 800000",
+      "errorNameRequired": "Surname, first name and position are required.",
+      "errorInvalidSalary": "Enter a valid monthly salary.",
+      "errorNetwork": "Network error. Please try again.",
+      "errorStaffNotFound": "This staff member could not be found. They may have been deleted.",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "saveChanges": "Save Changes",
+      "add": "Add"
+    }
+  },
   "classes": {
     "list": {
       "backLink": "DASHBOARD",
@@ -1372,6 +1426,7 @@
       "list": {
         "title": "Staff Payments",
         "subtitle": "Track salaries — {month}",
+        "manageStaffLink": "Manage staff",
         "statMonthlyPayroll": "Monthly Payroll",
         "statPaidThisMonth": "Paid This Month",
         "statStaffPaid": "Staff Paid This Month",
@@ -1384,7 +1439,7 @@
         "headerPaidThisYear": "Paid This Year",
         "headerOutstandingAdvance": "Outstanding Advance",
         "headerStatusThisMonth": "Status This Month",
-        "noStaff": "No staff registered yet.",
+        "noStaff": "No staff registered yet — go to the \"Staff\" menu to add one.",
         "paid": "Paid",
         "unpaid": "Unpaid",
         "historyTitle": "Payment History",
@@ -1396,22 +1451,6 @@
       },
       "edit": {
         "backLink": "STAFF PAYMENTS"
-      },
-      "addForm": {
-        "addButton": "+ Add Staff Member",
-        "title": "Add a Staff Member",
-        "nomLabel": "Last Name",
-        "prenomLabel": "First Name",
-        "posteLabel": "Role",
-        "postePlaceholder": "e.g. Director, Accountant, Supervisor",
-        "telephoneLabel": "Phone",
-        "emailLabel": "Email",
-        "salaryLabel": "Monthly Salary (GNF)",
-        "salaryPlaceholder": "e.g. 1500000",
-        "submit": "Add",
-        "savedToast": "Staff member added successfully.",
-        "errorRequired": "Last name, first name and role are required.",
-        "errorInvalidSalary": "Invalid salary."
       },
       "form": {
         "createTitle": "Staff Payment",

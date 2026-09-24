@@ -1,7 +1,6 @@
-// POST /api/staff — create a personnel record (Comptabilité > Paiement des
-//      personnels). Unlike Teacher, there is no separate "Gestion du
-//      personnel" section — staff are added directly from the payment page,
-//      so this route is gated to the same 'accounting' menu, not 'teachers'.
+// POST /api/staff — create a personnel record, from the dedicated
+//      "Personnel" section (/add-staff). Gated to its own 'staff' menu —
+//      a top-level nav item, not nested under Comptabilité.
 //
 // `runtime = 'nodejs'` is required by the runtime-enforcement test
 // (frontend/src/lib/server/observability/runtime-enforcement.test.ts).
@@ -30,7 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const csrfFail = verifyCsrf(req);
     if (csrfFail) return csrfFail;
 
-    const auth = await requireStaff({ menuKey: 'accounting' });
+    const auth = await requireStaff({ menuKey: 'staff' });
     if (auth instanceof NextResponse) return auth;
     const prisma = auth.user.prisma;
 

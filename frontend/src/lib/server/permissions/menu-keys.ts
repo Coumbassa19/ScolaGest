@@ -13,6 +13,7 @@ export const MENU_KEYS = [
   'grades',
   'accounting',
   'absences',
+  'staff',
   'messages',
   'settings',
 ] as const;

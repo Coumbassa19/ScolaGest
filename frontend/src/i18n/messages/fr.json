@@ -53,6 +53,7 @@
     "accountingExpenses": "Dépenses",
     "accountingSalaryAdvances": "Avances sur salaire",
     "absences": "Absences",
+    "staff": "Personnel",
     "messagesGroup": "Messages",
     "messagesNew": "Nouveau message",
     "messagesHistory": "Historique",
@@ -853,6 +854,59 @@
       "add": "Ajouter"
     }
   },
+  "staff": {
+    "list": {
+      "title": "Personnel",
+      "subtitle": "Enregistrez et gérez le personnel non-enseignant de votre école",
+      "totalStaff": "Total personnel",
+      "totalStaffTrend": "Personnel enregistré",
+      "monthlyPayroll": "Masse salariale mensuelle",
+      "monthlyPayrollTrend": "Salaires cumulés / mois",
+      "listTitle": "Liste du personnel",
+      "addStaff": "+ Ajouter",
+      "headerName": "Nom",
+      "headerPoste": "Poste",
+      "headerContact": "Contact",
+      "headerSalary": "Salaire mensuel",
+      "headerActions": "Actions",
+      "noMatch": "Aucun membre du personnel ne correspond à « {query} ».",
+      "noneYet": "Aucun personnel enregistré pour le moment.",
+      "confirmDelete": "Supprimer {name} du personnel ?"
+    },
+    "detail": {
+      "backLink": "PERSONNEL"
+    },
+    "add": {
+      "backLink": "PERSONNEL",
+      "title": "Ajouter un nouveau membre du personnel"
+    },
+    "form": {
+      "personalInfoTitle": "Informations personnelles",
+      "basicDataSubtitle": "Données de base du membre du personnel",
+      "lastNameLabel": "Nom :",
+      "lastNamePlaceholder": "ex. Camara",
+      "firstNameLabel": "Prénom :",
+      "firstNamePlaceholder": "ex. Fatoumata",
+      "posteLabel": "Poste :",
+      "postePlaceholder": "ex. Surveillant, Comptable, Agent d'entretien...",
+      "emailLabel": "Email :",
+      "emailPlaceholder": "ex. fatoumata@example.com",
+      "phoneLabel": "Téléphone :",
+      "phonePlaceholder": "ex. 621 234 567",
+      "payTitle": "Rémunération",
+      "paySubtitle": "Détermine le montant utilisé sur Comptabilité > Paiement des personnels",
+      "salaryLabel": "Salaire mensuel (GNF) :",
+      "salaryPlaceholder": "ex. 800000",
+      "errorNameRequired": "Le nom, le prénom et le poste sont obligatoires.",
+      "errorInvalidSalary": "Indique un salaire mensuel valide.",
+      "errorNetwork": "Erreur réseau. Réessaie.",
+      "errorStaffNotFound": "Ce membre du personnel est introuvable. Il a peut-être été supprimé.",
+      "cancel": "Annuler",
+      "saving": "Enregistrement…",
+      "saveChanges": "Enregistrer les modifications",
+      "add": "Ajouter"
+    }
+  },
   "classes": {
     "list": {
       "backLink": "TABLEAU DE BORD",
@@ -1358,6 +1412,7 @@
       "list": {
         "title": "Paiement des personnels",
         "subtitle": "Suivi des salaires — {month}",
+        "manageStaffLink": "Gérer le personnel",
         "statMonthlyPayroll": "Masse salariale mensuelle",
         "statPaidThisMonth": "Payé ce mois",
         "statStaffPaid": "Personnels payés ce mois",
@@ -1370,7 +1425,7 @@
         "headerPaidThisYear": "Payé cette année",
         "headerOutstandingAdvance": "Avance en cours",
         "headerStatusThisMonth": "Statut ce mois",
-        "noStaff": "Aucun personnel enregistré pour le moment.",
+        "noStaff": "Aucun personnel enregistré pour le moment — va dans le menu « Personnel » pour en ajouter.",
         "paid": "Payé",
         "unpaid": "Non payé",
         "historyTitle": "Historique des paiements",
@@ -1382,22 +1437,6 @@
       },
       "edit": {
         "backLink": "PAIEMENT DES PERSONNELS"
-      },
-      "addForm": {
-        "addButton": "+ Ajouter un personnel",
-        "title": "Ajouter un personnel",
-        "nomLabel": "Nom",
-        "prenomLabel": "Prénom",
-        "posteLabel": "Poste",
-        "postePlaceholder": "ex. Directeur, Comptable, Surveillant",
-        "telephoneLabel": "Téléphone",
-        "emailLabel": "Email",
-        "salaryLabel": "Salaire mensuel (GNF)",
-        "salaryPlaceholder": "ex. 1500000",
-        "submit": "Ajouter",
-        "savedToast": "Personnel ajouté avec succès.",
-        "errorRequired": "Le nom, le prénom et le poste sont obligatoires.",
-        "errorInvalidSalary": "Salaire invalide."
       },
       "form": {
         "createTitle": "Paiement de personnel",

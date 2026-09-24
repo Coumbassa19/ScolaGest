@@ -5,7 +5,6 @@ import Sidebar from '@/components/Sidebar';
 import Icon from '@/components/global/Icon';
 import RowActions from '@/components/RowActions';
 import StaffPaymentForm from '@/components/forms/StaffPaymentForm';
-import AddStaffForm from '@/components/forms/AddStaffForm';
 import EditableStaffSalaryCell from '@/components/forms/EditableStaffSalaryCell';
 import { MobileCardList, CardField } from '@/components/MobileCardList';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
@@ -121,7 +120,12 @@ export default async function StaffPaymentsAccountingPage() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              <AddStaffForm />
+              <Link
+                href="/staff"
+                className="px-4 py-2 border border-border text-foreground text-sm font-semibold rounded-md bg-surface text-center"
+              >
+                {t('manageStaffLink')}
+              </Link>
               <StaffPaymentForm
                 staff={staffMembers.map((s) => ({
                   id: s.id,
