@@ -36,15 +36,36 @@ export default async function TeachersPage({
     orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
   });
 
+  // "Spécialité" and "Classes" are derived live from TeacherAssignment (the
+  // matière/classe pairings set on each Subject) rather than read off
+  // Teacher.specialite/classesAssignees — those free-text columns have no
+  // input anywhere in the add/edit-teacher form and are always empty. This
+  // mirrors the same relational ground truth already used for TEACHER-role
+  // scoping (see src/lib/server/permissions/teacher-scope.ts).
+  const assignments = await prisma.teacherAssignment.findMany({
+    include: { subject: { select: { nom: true } }, schoolClass: { select: { name: true } } },
+  });
+  const specialtiesByTeacher = new Map<string, Set<string>>();
+  const classesByTeacher = new Map<string, Set<string>>();
+  for (const a of assignments) {
+    if (!specialtiesByTeacher.has(a.teacherId)) specialtiesByTeacher.set(a.teacherId, new Set());
+    specialtiesByTeacher.get(a.teacherId)!.add(a.subject.nom);
+    if (!classesByTeacher.has(a.teacherId)) classesByTeacher.set(a.teacherId, new Set());
+    classesByTeacher.get(a.teacherId)!.add(a.schoolClass.name);
+  }
+  const specialiteFor = (teacherId: string) =>
+    [...(specialtiesByTeacher.get(teacherId) ?? [])].join(', ');
+  const classesFor = (teacherId: string) => [...(classesByTeacher.get(teacherId) ?? [])].join(', ');
+
   const teachers = query
     ? allTeachers.filter((t) => {
         const haystack = [
           t.nom,
           t.prenom,
-          t.specialite,
+          specialiteFor(t.id),
           t.email,
           t.telephone,
-          t.classesAssignees,
+          classesFor(t.id),
           STATUT_LABEL[t.statut] ?? t.statut,
         ]
           .filter(Boolean)
@@ -57,7 +78,7 @@ export default async function TeachersPage({
   const totalTeachers = allTeachers.length;
   const tempsPlein = allTeachers.filter((t) => t.statut === 'TEMPS_PLEIN').length;
   const vacataires = allTeachers.filter((t) => t.statut === 'VACATAIRE').length;
-  const specialites = new Set(allTeachers.map((t) => t.specialite)).size;
+  const specialites = new Set(assignments.map((a) => a.subject.nom)).size;
   const pctTempsPlein = totalTeachers > 0 ? Math.round((tempsPlein / totalTeachers) * 100) : 0;
   const pctVacataires = totalTeachers > 0 ? Math.round((vacataires / totalTeachers) * 100) : 0;
 
@@ -147,11 +168,11 @@ export default async function TeachersPage({
                           {STATUT_LABEL[teacher.statut] ?? teacher.statut}
                         </span>
                       </div>
-                      <CardField label={t('headerSpecialty')} value={teacher.specialite} />
                       <CardField
-                        label={t('headerClasses')}
-                        value={teacher.classesAssignees || '—'}
+                        label={t('headerSpecialty')}
+                        value={specialiteFor(teacher.id) || '—'}
                       />
+                      <CardField label={t('headerClasses')} value={classesFor(teacher.id) || '—'} />
                       <CardField
                         label={t('headerContact')}
                         value={teacher.telephone || teacher.email || '—'}
@@ -208,14 +229,16 @@ export default async function TeachersPage({
                           <span className="font-semibold text-foreground">
                             {teacher.nom} {teacher.prenom}
                           </span>
-                          <span className="text-foreground">{teacher.specialite}</span>
+                          <span className="text-foreground">
+                            {specialiteFor(teacher.id) || '—'}
+                          </span>
                           <span
                             className={`text-xs font-semibold ${teacher.statut === 'TEMPS_PLEIN' ? 'text-success' : 'text-warning'}`}
                           >
                             {STATUT_LABEL[teacher.statut] ?? teacher.statut}
                           </span>
                           <span className="text-muted-foreground">
-                            {teacher.classesAssignees || '—'}
+                            {classesFor(teacher.id) || '—'}
                           </span>
                           <span className="text-muted-foreground">
                             {teacher.telephone || teacher.email || '—'}
