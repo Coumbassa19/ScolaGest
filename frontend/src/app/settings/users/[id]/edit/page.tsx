@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import Sidebar from '@/components/Sidebar';
 import Icon from '@/components/global/Icon';
 import EditUserMenusForm from '@/components/forms/EditUserMenusForm';
-import { requireAdminPage } from '@/lib/server/middleware/require-page-auth';
+import { requireSchoolAdminPage } from '@/lib/server/middleware/require-page-auth';
 
 export const metadata: Metadata = {
   title: 'Modifier les accès',
@@ -13,17 +13,25 @@ export const metadata: Metadata = {
 
 export default async function EditUserMenusPage({ params }: { params: Promise<{ id: string }> }) {
   // Role gate, not a menu gate — same reasoning as /settings/users/new
-  // (see requireAdminPage): managing another account's access is never
-  // something enabledMenus itself can grant.
-  const admin = await requireAdminPage('ADMIN');
+  // (see requireSchoolAdminPage): managing another account's access is
+  // never something enabledMenus itself can grant.
+  const admin = await requireSchoolAdminPage();
   const prisma = admin.user.prisma;
   const { id } = await params;
 
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, name: true, role: true, enabledMenus: true },
+    select: { id: true, email: true, name: true, role: true, enabledMenus: true, schoolId: true },
   });
-  if (!user || (user.role !== 'DIRECTION' && user.role !== 'TEACHER' && user.role !== 'STAFF')) {
+  // User isn't tenant-scoped by admin.prisma (see requireSchoolAdmin's
+  // comment) — a DIRECTION owner must never reach another school's account
+  // by guessing its id, so that case 404s exactly like a missing row.
+  const ownSchool = admin.user.role !== 'DIRECTION' || user?.schoolId === admin.user.schoolId;
+  if (
+    !user ||
+    !ownSchool ||
+    (user.role !== 'DIRECTION' && user.role !== 'TEACHER' && user.role !== 'STAFF')
+  ) {
     notFound();
   }
 

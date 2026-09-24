@@ -41,10 +41,15 @@ export default async function SettingsPage() {
   const prisma = staff.user.prisma;
   const schoolId = requireSchoolId(staff.user.schoolId);
   // Managing OTHER accounts' access is a role privilege, not a menu toggle
-  // (see requireAdminPage) — DIRECTION/TEACHER accounts with the 'settings'
-  // menu granted still never see this section, no matter what enabledMenus
-  // says, since roleRank always ranks them 0.
-  const isAdmin = staff.user.role === 'ADMIN' || staff.user.role === 'SUPERADMIN';
+  // (see requireSchoolAdminPage) — TEACHER/STAFF accounts with the
+  // 'settings' menu granted still never see this section, no matter what
+  // enabledMenus says. DIRECTION is included here (unlike roleRank, which
+  // ranks it 0 for the platform-wide /admin back office): a school's own
+  // owner manages its own school's accounts, just never another school's.
+  const isAdmin =
+    staff.user.role === 'ADMIN' ||
+    staff.user.role === 'SUPERADMIN' ||
+    staff.user.role === 'DIRECTION';
   const staffUsers = isAdmin
     ? await prisma.user.findMany({
         where: { schoolId, role: { in: ['ADMIN', 'SUPERADMIN', 'DIRECTION', 'TEACHER', 'STAFF'] } },
@@ -106,7 +111,7 @@ export default async function SettingsPage() {
               <AcademicYearControl />
             </div>
 
-            {/* Section: Utilisateurs — ADMIN/SUPERADMIN only (see isAdmin above) */}
+            {/* Section: Utilisateurs — ADMIN/SUPERADMIN/DIRECTION only (see isAdmin above) */}
             {isAdmin && (
               <div className="bg-surface rounded-lg border border-border px-6 py-5">
                 <div className="mb-5 pb-5 border-b border-border flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">

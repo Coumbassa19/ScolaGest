@@ -5,24 +5,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 
 vi.mock('@/lib/server/middleware', () => ({
-  requireAdmin: vi.fn(),
+  requireSchoolAdmin: vi.fn(),
 }));
 vi.mock('@/lib/server/middleware/rate-limit-by-userid', () => ({
   enforceAdminRateLimit: vi.fn(),
 }));
 
-import { requireAdmin } from '@/lib/server/middleware';
+import { requireSchoolAdmin } from '@/lib/server/middleware';
 import { enforceAdminRateLimit } from '@/lib/server/middleware/rate-limit-by-userid';
 import { GET } from './route';
 import { seedAdmin } from '@/test-utils/admin-fixtures';
 
-const mockRequireAdmin = vi.mocked(requireAdmin);
+const mockRequireSchoolAdmin = vi.mocked(requireSchoolAdmin);
 const mockRateLimit = vi.mocked(enforceAdminRateLimit);
 
 const adminUser = seedAdmin({ id: 'admin_1', email: 'admin@test.local' });
 const adminCtx = {
   user: { sub: adminUser.id, email: adminUser.email },
-  admin: { id: adminUser.id, email: adminUser.email, role: 'ADMIN' as const, prisma: prismaMock },
+  admin: {
+    id: adminUser.id,
+    email: adminUser.email,
+    role: 'ADMIN' as const,
+    schoolId: 'school_1',
+    prisma: prismaMock,
+  },
 };
 
 function makeGet(url: string): NextRequest {
@@ -35,7 +41,7 @@ function ctxWith(id: string): { params: Promise<{ id: string }> } {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockRequireAdmin.mockResolvedValue(adminCtx);
+  mockRequireSchoolAdmin.mockResolvedValue(adminCtx);
   mockRateLimit.mockResolvedValue(null);
 });
 
@@ -76,12 +82,44 @@ describe('/api/admin/users/[id] — detail', () => {
     expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
   });
 
-  it('GET propagates 403 from requireAdmin without DB hit', async () => {
-    mockRequireAdmin.mockResolvedValueOnce(
+  it('GET propagates 403 from requireSchoolAdmin without DB hit', async () => {
+    mockRequireSchoolAdmin.mockResolvedValueOnce(
       NextResponse.json({ error: 'ADMIN_REQUIRED' }, { status: 403 }),
     );
     const res = await GET(makeGet('http://test/api/admin/users/u1'), ctxWith('u1'));
     expect(res.status).toBe(403);
     expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('GET returns 404 for a DIRECTION actor targeting another school (no cross-tenant leak)', async () => {
+    mockRequireSchoolAdmin.mockResolvedValueOnce({
+      user: { sub: 'dir_1', email: 'dir@test.local' },
+      admin: {
+        id: 'dir_1',
+        email: 'dir@test.local',
+        role: 'DIRECTION' as const,
+        schoolId: 'school_1',
+        prisma: prismaMock,
+      },
+    });
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'u_other_school',
+      email: 'other@test.local',
+      name: null,
+      avatarUrl: null,
+      role: 'TEACHER',
+      status: 'ACTIVE',
+      emailVerifiedAt: null,
+      createdAt: new Date('2026-05-01T00:00:00Z'),
+      schoolId: 'school_2',
+    } as never);
+
+    const res = await GET(
+      makeGet('http://test/api/admin/users/u_other_school'),
+      ctxWith('u_other_school'),
+    );
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('USER_NOT_FOUND');
   });
 });

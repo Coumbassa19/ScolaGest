@@ -4,17 +4,18 @@ import { getTranslations } from 'next-intl/server';
 import Sidebar from '@/components/Sidebar';
 import Icon from '@/components/global/Icon';
 import CreateUserForm from '@/components/forms/CreateUserForm';
-import { requireAdminPage } from '@/lib/server/middleware/require-page-auth';
+import { requireSchoolAdminPage } from '@/lib/server/middleware/require-page-auth';
 
 export const metadata: Metadata = {
   title: 'Créer un utilisateur',
 };
 
 export default async function NewStaffUserPage() {
-  // Role gate, not a menu gate — see requireAdminPage / settings/page.tsx's
-  // isAdmin check for why managing other accounts is never something
-  // enabledMenus can grant.
-  const admin = await requireAdminPage('ADMIN');
+  // Role gate, not a menu gate — see requireSchoolAdminPage /
+  // settings/page.tsx's isAdmin check for why managing other accounts is
+  // never something enabledMenus can grant. ADMIN/SUPERADMIN or a
+  // DIRECTION account managing its own school.
+  const admin = await requireSchoolAdminPage();
   const prisma = admin.user.prisma;
 
   const [unlinkedTeachers, unlinkedStaff] = await Promise.all([

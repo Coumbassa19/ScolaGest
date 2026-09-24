@@ -6,7 +6,8 @@
 //
 // Sequence:
 //   makeRequestContext → withRequestContext →
-//     verifyCsrf (CF-02) → requireAdmin('ADMIN') (CF-08) →
+//     verifyCsrf (CF-02) → requireSchoolAdmin (CF-08; ADMIN/SUPERADMIN or a
+//       DIRECTION account, own school only) →
 //     enforceAdminRateLimit (D-ADMIN-05) → Zod parse →
 //     prisma.$transaction(async tx => find → role-aware gate → update → logAdminAction)
 //
@@ -19,7 +20,7 @@ import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { verifyCsrf } from '@/lib/server/auth';
-import { requireAdmin } from '@/lib/server/middleware';
+import { requireSchoolAdmin } from '@/lib/server/middleware';
 import { prisma } from '@/lib/server/prisma';
 import { logAdminAction } from '@/lib/server/admin/audit';
 import { enforceAdminRateLimit } from '@/lib/server/middleware/rate-limit-by-userid';
@@ -45,7 +46,7 @@ export async function PATCH(
     const csrfFail = verifyCsrf(req);
     if (csrfFail) return csrfFail;
 
-    const auth = await requireAdmin('ADMIN');
+    const auth = await requireSchoolAdmin();
     if (auth instanceof NextResponse) return auth;
 
     const limited = await enforceAdminRateLimit(auth.admin.id);
@@ -63,9 +64,14 @@ export async function PATCH(
     const result: Discriminator = await prisma.$transaction(async (tx) => {
       const target = await tx.user.findUnique({
         where: { id },
-        select: { id: true, status: true, email: true, name: true, role: true },
+        select: { id: true, status: true, email: true, name: true, role: true, schoolId: true },
       });
-      if (!target) return { kind: 'NOT_FOUND' as const };
+      // User isn't tenant-scoped by admin.prisma (see requireSchoolAdmin's
+      // comment) — a DIRECTION owner must never suspend/restore an account
+      // outside its own school, so that case 404s exactly like a missing row.
+      if (!target || (auth.admin.role === 'DIRECTION' && target.schoolId !== auth.admin.schoolId)) {
+        return { kind: 'NOT_FOUND' as const };
+      }
 
       // Idempotent no-op: same status → return without writing AdminAction.
       // Mitigation T-03-06-08 (audit-log noise from repeated PATCH).

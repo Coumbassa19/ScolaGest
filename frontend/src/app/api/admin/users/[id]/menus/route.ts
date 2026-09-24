@@ -1,15 +1,16 @@
 // ADMIN-01 (follow-up) — PATCH /api/admin/users/[id]/menus
 //
-// Lets an ADMIN/SUPERADMIN change the `enabledMenus` of an EXISTING
-// DIRECTION/TEACHER/STAFF account after creation — previously this could
-// only be set once, at account-creation time (POST /api/admin/users), with
-// no way to grant/revoke a menu (e.g. 'grades') for an account created
-// earlier. Same gating as creation (requireAdmin('ADMIN')) and the same
-// `enabledMenus` semantics as menu-keys.ts's effectiveMenus(): this is the
-// BONUS set on top of the role's core menus, not the full effective list.
+// Lets an ADMIN/SUPERADMIN, or a DIRECTION account acting on its own school,
+// change the `enabledMenus` of an EXISTING DIRECTION/TEACHER/STAFF account
+// after creation — previously this could only be set once, at
+// account-creation time (POST /api/admin/users), with no way to grant/
+// revoke a menu (e.g. 'grades') for an account created earlier. Same gating
+// as creation (requireSchoolAdmin) and the same `enabledMenus` semantics as
+// menu-keys.ts's effectiveMenus(): this is the BONUS set on top of the
+// role's core menus, not the full effective list.
 //
 // Sequence: makeRequestContext → withRequestContext → verifyCsrf →
-//   requireAdmin('ADMIN') → enforceAdminRateLimit → Zod parse →
+//   requireSchoolAdmin → enforceAdminRateLimit → Zod parse →
 //   prisma.user.update → logAdminAction (action: 'user.menus_change').
 export const runtime = 'nodejs';
 
@@ -17,7 +18,7 @@ import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { verifyCsrf } from '@/lib/server/auth';
-import { requireAdmin } from '@/lib/server/middleware';
+import { requireSchoolAdmin } from '@/lib/server/middleware';
 import { prisma } from '@/lib/server/prisma';
 import { logAdminAction } from '@/lib/server/admin/audit';
 import { enforceAdminRateLimit } from '@/lib/server/middleware/rate-limit-by-userid';
@@ -37,7 +38,7 @@ export async function PATCH(
     const csrfFail = verifyCsrf(req);
     if (csrfFail) return csrfFail;
 
-    const auth = await requireAdmin('ADMIN');
+    const auth = await requireSchoolAdmin();
     if (auth instanceof NextResponse) return auth;
 
     const limited = await enforceAdminRateLimit(auth.admin.id);
@@ -54,9 +55,12 @@ export async function PATCH(
 
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, role: true, enabledMenus: true },
+      select: { id: true, role: true, enabledMenus: true, schoolId: true },
     });
-    if (!target) {
+    // User isn't tenant-scoped by admin.prisma (see requireSchoolAdmin's
+    // comment) — a DIRECTION owner must never touch another school's
+    // account, so that case 404s exactly like a missing row.
+    if (!target || (auth.admin.role === 'DIRECTION' && target.schoolId !== auth.admin.schoolId)) {
       return NextResponse.json(
         { error: 'USER_NOT_FOUND', message: 'User not found' },
         { status: 404, headers: { 'x-request-id': reqCtx.requestId } },

@@ -146,3 +146,61 @@ export async function requireAdminPage(minRole: AdminRole = 'ADMIN'): Promise<Ad
     },
   };
 }
+
+export interface SchoolAdminPageContext {
+  user: {
+    sub: string;
+    email: string;
+    role: AdminRole | 'DIRECTION';
+    schoolId: string | null;
+    prisma: PrismaClient;
+  };
+}
+
+/**
+ * requireSchoolAdminPage — Server Component counterpart to
+ * requireSchoolAdmin (see that function's comment in middleware/index.ts for
+ * the full reasoning): admits ADMIN/SUPERADMIN (platform back office,
+ * unrestricted) as well as DIRECTION (a school's own owner, but only ever
+ * for THEIR school — callers must compare `target.schoolId ===
+ * admin.schoolId` themselves before acting on a specific User row, since
+ * User isn't auto-scoped by admin.prisma).
+ */
+export async function requireSchoolAdminPage(): Promise<SchoolAdminPageContext> {
+  const store = await cookies();
+  const token = store.get(COOKIE_NAME)?.value;
+  if (!token) redirect('/login');
+
+  const payload = await verifyToken(token);
+  if (!payload) redirect('/login');
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.sub },
+    select: { id: true, email: true, role: true, status: true, schoolId: true, tokenVersion: true },
+  });
+  if (!user) redirect('/login');
+  if (user.tokenVersion !== (payload.tokenVersion ?? 0)) redirect('/login');
+  if (user.status === 'SUSPENDED') redirect('/login');
+
+  if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN' && user.role !== 'DIRECTION') {
+    redirect('/403');
+  }
+
+  if (user.schoolId) {
+    const school = await prisma.school.findUnique({
+      where: { id: user.schoolId },
+      select: { status: true, trialEndsAt: true, currentPeriodEnd: true },
+    });
+    if (school && isSchoolAccessBlocked(school)) redirect('/billing');
+  }
+
+  return {
+    user: {
+      sub: user.id,
+      email: user.email,
+      role: user.role as AdminRole | 'DIRECTION',
+      schoolId: user.schoolId,
+      prisma: user.schoolId ? scopedPrisma(user.schoolId) : prisma,
+    },
+  };
+}

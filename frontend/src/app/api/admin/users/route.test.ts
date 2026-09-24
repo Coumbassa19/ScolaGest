@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 vi.mock('@/lib/server/middleware', () => ({
   requireAdmin: vi.fn(),
   requireSuperadmin: vi.fn(),
+  requireSchoolAdmin: vi.fn(),
 }));
 vi.mock('@/lib/server/middleware/rate-limit-by-userid', () => ({
   enforceAdminRateLimit: vi.fn(),
@@ -28,7 +29,7 @@ vi.mock('@/lib/server/admin/audit', () => ({
   logAdminAction: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { requireAdmin, requireSuperadmin } from '@/lib/server/middleware';
+import { requireAdmin, requireSuperadmin, requireSchoolAdmin } from '@/lib/server/middleware';
 import { enforceAdminRateLimit } from '@/lib/server/middleware/rate-limit-by-userid';
 import { verifyCsrf } from '@/lib/server/auth';
 import { logAdminAction } from '@/lib/server/admin/audit';
@@ -45,6 +46,7 @@ import {
 
 const mockRequireAdmin = vi.mocked(requireAdmin);
 const mockRequireSuperadmin = vi.mocked(requireSuperadmin);
+const mockRequireSchoolAdmin = vi.mocked(requireSchoolAdmin);
 const mockRateLimit = vi.mocked(enforceAdminRateLimit);
 const mockVerifyCsrf = vi.mocked(verifyCsrf);
 const mockLogAdminAction = vi.mocked(logAdminAction);
@@ -54,11 +56,38 @@ const adminCtx = {
   user: { sub: adminUser.id, email: adminUser.email },
   admin: { id: adminUser.id, email: adminUser.email, role: 'ADMIN' as const, prisma: prismaMock },
 };
+// PATCH /[id]/status is gated by requireSchoolAdmin (ADMIN/SUPERADMIN, or a
+// DIRECTION account acting on its own school — see middleware/index.ts).
+const schoolAdminCtx = {
+  user: { sub: adminUser.id, email: adminUser.email },
+  admin: {
+    id: adminUser.id,
+    email: adminUser.email,
+    role: 'ADMIN' as const,
+    schoolId: 'school_1',
+    prisma: prismaMock,
+  },
+};
 
 const superadminUser = seedSuperadmin({ id: 'superadmin_1', email: 'superadmin@test.local' });
 const superadminCtx = {
   user: { sub: superadminUser.id, email: superadminUser.email },
-  admin: { id: superadminUser.id, email: superadminUser.email, role: 'SUPERADMIN' as const, prisma: prismaMock },
+  admin: {
+    id: superadminUser.id,
+    email: superadminUser.email,
+    role: 'SUPERADMIN' as const,
+    prisma: prismaMock,
+  },
+};
+const schoolSuperadminCtx = {
+  user: { sub: superadminUser.id, email: superadminUser.email },
+  admin: {
+    id: superadminUser.id,
+    email: superadminUser.email,
+    role: 'SUPERADMIN' as const,
+    schoolId: 'school_1',
+    prisma: prismaMock,
+  },
 };
 
 function makeGet(url: string): NextRequest {
@@ -96,6 +125,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue(adminCtx);
   mockRequireSuperadmin.mockResolvedValue(superadminCtx);
+  mockRequireSchoolAdmin.mockResolvedValue(schoolAdminCtx);
   mockRateLimit.mockResolvedValue(null);
   mockVerifyCsrf.mockReturnValue(null);
   mockLogAdminAction.mockResolvedValue(undefined);
@@ -266,7 +296,12 @@ describe('/api/admin/users/[id]/role [Wave 2] — role change', () => {
     const { keeper, demotable } = seedDemotableSuperadmin();
     mockRequireSuperadmin.mockResolvedValueOnce({
       user: { sub: keeper.id, email: keeper.email },
-      admin: { id: keeper.id, email: keeper.email, role: 'SUPERADMIN' as const, prisma: prismaMock },
+      admin: {
+        id: keeper.id,
+        email: keeper.email,
+        role: 'SUPERADMIN' as const,
+        prisma: prismaMock,
+      },
     });
     // Inside the tx: findUnique returns the demotable user, count=2, then update.
     prismaMock.user.findUnique.mockResolvedValueOnce({
@@ -327,7 +362,12 @@ describe('/api/admin/users/[id]/role [Wave 2] — role change', () => {
     const onlyOne = seedSuperadmin({ id: 'superadmin_only', email: 'only@test.local' });
     mockRequireSuperadmin.mockResolvedValueOnce({
       user: { sub: onlyOne.id, email: onlyOne.email },
-      admin: { id: onlyOne.id, email: onlyOne.email, role: 'SUPERADMIN' as const, prisma: prismaMock },
+      admin: {
+        id: onlyOne.id,
+        email: onlyOne.email,
+        role: 'SUPERADMIN' as const,
+        prisma: prismaMock,
+      },
     });
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: onlyOne.id,
@@ -448,7 +488,7 @@ describe('/api/admin/users/[id]/status [Wave 2] — suspend / restore', () => {
   });
 
   it('PATCH SUSPENDED → ACTIVE by SUPERADMIN → 200 + AdminAction user.restore', async () => {
-    mockRequireAdmin.mockResolvedValueOnce(superadminCtx);
+    mockRequireSchoolAdmin.mockResolvedValueOnce(schoolSuperadminCtx);
     const susp = seedSuspendedUser();
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: susp.id,
@@ -553,7 +593,7 @@ describe('/api/admin/users/[id]/status [Wave 2] — suspend / restore', () => {
   });
 
   it('PATCH ACTIVE → SUSPENDED on a SUPERADMIN by SUPERADMIN → 200 + AdminAction user.suspend', async () => {
-    mockRequireAdmin.mockResolvedValueOnce(superadminCtx);
+    mockRequireSchoolAdmin.mockResolvedValueOnce(schoolSuperadminCtx);
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: 'super_target_2',
       status: 'ACTIVE',
@@ -601,6 +641,69 @@ describe('/api/admin/users/[id]/status [Wave 2] — suspend / restore', () => {
     expect(body.error).toBe('VALIDATION_FAILED');
   });
 
+  it('PATCH status by a DIRECTION owner targeting another school → 404 (no cross-tenant leak)', async () => {
+    mockRequireSchoolAdmin.mockResolvedValueOnce({
+      user: { sub: 'dir_1', email: 'dir@test.local' },
+      admin: {
+        id: 'dir_1',
+        email: 'dir@test.local',
+        role: 'DIRECTION' as const,
+        schoolId: 'school_1',
+        prisma: prismaMock,
+      },
+    });
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'u_other_school',
+      status: 'ACTIVE',
+      email: 'other@test.local',
+      name: null,
+      role: 'TEACHER',
+      schoolId: 'school_2',
+    } as never);
+
+    const res = await PATCH_STATUS(
+      makePatch('http://test/api/admin/users/u_other_school/status', { status: 'SUSPENDED' }),
+      paramsOf('u_other_school'),
+    );
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('USER_NOT_FOUND');
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
+  it('PATCH status by a DIRECTION owner on its own school → 200', async () => {
+    mockRequireSchoolAdmin.mockResolvedValueOnce({
+      user: { sub: 'dir_1', email: 'dir@test.local' },
+      admin: {
+        id: 'dir_1',
+        email: 'dir@test.local',
+        role: 'DIRECTION' as const,
+        schoolId: 'school_1',
+        prisma: prismaMock,
+      },
+    });
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: 'u_own_school',
+      status: 'ACTIVE',
+      email: 'own@test.local',
+      name: null,
+      role: 'TEACHER',
+      schoolId: 'school_1',
+    } as never);
+    prismaMock.user.update.mockResolvedValueOnce({
+      id: 'u_own_school',
+      status: 'SUSPENDED',
+    } as never);
+
+    const res = await PATCH_STATUS(
+      makePatch('http://test/api/admin/users/u_own_school/status', { status: 'SUSPENDED' }),
+      paramsOf('u_own_school'),
+    );
+
+    expect(res.status).toBe(200);
+  });
+
   it('PATCH status rejects when CSRF fails', async () => {
     mockVerifyCsrf.mockReturnValueOnce(
       NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 }),
@@ -612,7 +715,7 @@ describe('/api/admin/users/[id]/status [Wave 2] — suspend / restore', () => {
     );
 
     expect(res.status).toBe(403);
-    expect(mockRequireAdmin).not.toHaveBeenCalled();
+    expect(mockRequireSchoolAdmin).not.toHaveBeenCalled();
     expect(prismaMock.user.update).not.toHaveBeenCalled();
   });
 });

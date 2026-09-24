@@ -150,7 +150,10 @@ export async function requireAdmin(
     });
     if (school && isSchoolAccessBlocked(school)) {
       return NextResponse.json(
-        { error: 'SUBSCRIPTION_REQUIRED', message: 'This school’s trial or subscription has ended.' },
+        {
+          error: 'SUBSCRIPTION_REQUIRED',
+          message: 'This school’s trial or subscription has ended.',
+        },
         { status: 402 },
       );
     }
@@ -167,6 +170,79 @@ export async function requireSuperadmin(
   authHeader?: string | null,
 ): Promise<AdminContext | NextResponse> {
   return requireAdmin('SUPERADMIN', authHeader);
+}
+
+export interface SchoolAdminContext extends AuthContext {
+  admin: {
+    id: string;
+    email: string;
+    role: AdminRole | 'DIRECTION';
+    schoolId: string | null;
+    prisma: PrismaClient;
+  };
+}
+
+/**
+ * requireSchoolAdmin — like requireAdmin('ADMIN'), but also accepts a
+ * DIRECTION account acting as the owner of their OWN school. DIRECTION
+ * carries no platform admin-back-office rank (roleRank always ranks it 0 —
+ * see require-admin.ts and the schema.prisma comment on User.role), which is
+ * exactly right for the platform-wide /admin/* back office (orders,
+ * withdrawals, audit log, other schools' data — reserved to ADMIN/
+ * SUPERADMIN only). But a school that subscribes needs full control over
+ * ITS OWN accounts (create/edit/suspend teacher & staff logins, adjust their
+ * menus) — that's what this grants, scoped to `admin.schoolId`.
+ *
+ * `User` is deliberately excluded from the tenant-scope Prisma extension
+ * (see prisma.ts's TENANT_SCOPED_MODELS comment — login must resolve a user
+ * by email before any schoolId is known), so `admin.prisma.user.*` calls are
+ * NOT auto-scoped here. Callers touching a specific User row by id MUST
+ * compare `target.schoolId === admin.schoolId` themselves whenever
+ * `admin.role === 'DIRECTION'` (ADMIN/SUPERADMIN keep today's unrestricted
+ * cross-school reach for support purposes).
+ */
+export async function requireSchoolAdmin(
+  authHeader?: string | null,
+): Promise<SchoolAdminContext | NextResponse> {
+  const auth = await requireAuth(authHeader);
+  if (auth instanceof NextResponse) return auth;
+
+  const user = await prisma.user.findUnique({
+    where: { id: auth.user.sub },
+    select: { id: true, email: true, role: true, schoolId: true },
+  });
+  if (!user) {
+    return NextResponse.json({ error: 'Account not found' }, { status: 401 });
+  }
+  const role = user.role;
+  if (role !== 'ADMIN' && role !== 'SUPERADMIN' && role !== 'DIRECTION') {
+    return NextResponse.json(
+      { error: 'ADMIN_REQUIRED', message: 'Admin access required' },
+      { status: 403 },
+    );
+  }
+
+  if (user.schoolId) {
+    const school = await prisma.school.findUnique({
+      where: { id: user.schoolId },
+      select: { status: true, trialEndsAt: true, currentPeriodEnd: true },
+    });
+    if (school && isSchoolAccessBlocked(school)) {
+      return NextResponse.json(
+        {
+          error: 'SUBSCRIPTION_REQUIRED',
+          message: 'This school’s trial or subscription has ended.',
+        },
+        { status: 402 },
+      );
+    }
+  }
+
+  const adminPrisma = user.schoolId ? scopedPrisma(user.schoolId) : prisma;
+  return {
+    user: { sub: user.id, email: user.email },
+    admin: { id: user.id, email: user.email, role, schoolId: user.schoolId, prisma: adminPrisma },
+  };
 }
 
 /**

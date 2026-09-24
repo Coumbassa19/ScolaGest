@@ -21,9 +21,11 @@
 // (long random token, see generateSetupToken()) is emailed immediately via
 // the same getEmailQueue().sendNow() pattern the Messages feature uses, so
 // the admin sees live Sent/Failed feedback rather than firing into a queue
-// blind. Role floor: ADMIN can create DIRECTION/TEACHER; only SUPERADMIN
-// can create another ADMIN/SUPERADMIN (mirrors PATCH .../role's spirit —
-// an ADMIN should never be able to mint a peer or superior).
+// blind. Gated by requireSchoolAdmin: ADMIN/SUPERADMIN (platform) or a
+// DIRECTION account (a school's own owner — always creates within its own
+// schoolId, see requireSchoolAdmin). Role floor: DIRECTION/ADMIN can create
+// DIRECTION/TEACHER/STAFF; only SUPERADMIN can create another ADMIN/
+// SUPERADMIN (mirrors PATCH .../role's spirit — never mint a peer/superior).
 export const runtime = 'nodejs';
 
 import 'server-only';
@@ -31,7 +33,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { verifyCsrf, generateSetupToken } from '@/lib/server/auth';
-import { requireAdmin } from '@/lib/server/middleware';
+import { requireAdmin, requireSchoolAdmin } from '@/lib/server/middleware';
 import { prisma, scopedPrisma } from '@/lib/server/prisma';
 import { clampLimit, cursorWhere, buildPage, decodeCursor } from '@/lib/server/pagination/paginate';
 import { enforceAdminRateLimit } from '@/lib/server/middleware/rate-limit-by-userid';
@@ -137,7 +139,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const csrfFail = verifyCsrf(req);
     if (csrfFail) return csrfFail;
 
-    const auth = await requireAdmin('ADMIN');
+    const auth = await requireSchoolAdmin();
     if (auth instanceof NextResponse) return auth;
 
     const limited = await enforceAdminRateLimit(auth.admin.id);
@@ -184,23 +186,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // requireAdmin's AdminContext doesn't carry schoolId (login must resolve
-    // a user by email before any tenant is known), so it's re-read here.
-    // Teacher/Staff are tenant-scoped models (see TENANT_SCOPED_MODELS in
-    // src/lib/server/prisma.ts) — looking them up (and creating the new
-    // User's own schoolId) must go through a schoolId-bound client, not the
-    // plain unscoped `prisma` import, or the tenant-scope guard throws.
-    const actingAdmin = await prisma.user.findUnique({
-      where: { id: auth.admin.id },
-      select: { schoolId: true },
-    });
-    if (!actingAdmin?.schoolId) {
+    if (!auth.admin.schoolId) {
       return NextResponse.json(
         { error: 'NO_SCHOOL', message: 'Your account is not linked to a school.' },
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
-    const schoolId = actingAdmin.schoolId;
+    const schoolId = auth.admin.schoolId;
     const schoolPrisma = scopedPrisma(schoolId);
 
     const token = generateSetupToken();
