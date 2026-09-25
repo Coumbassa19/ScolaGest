@@ -77,6 +77,17 @@ export default function AddSubjectForm({
   const [type, setType] = useState(initialData?.type ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showStayPrompt, setShowStayPrompt] = useState(false);
+
+  function resetFormFields() {
+    setNom('');
+    setCode('');
+    setCoefficient('2');
+    setTeacherId('');
+    setSelectedClasses(new Set());
+    setVolumeHoraire('2');
+    setType('');
+  }
 
   function toggleClass(name: string) {
     setSelectedClasses((prev) => {
@@ -112,7 +123,7 @@ export default function AddSubjectForm({
       } else {
         await api('/api/subjects', { method: 'POST', body });
         toast(tCommon('savedToast'), 'success');
-        router.push('/subjects');
+        setShowStayPrompt(true);
       }
       router.refresh();
     } catch (err) {
@@ -127,8 +138,39 @@ export default function AddSubjectForm({
     }
   }
 
+  function onStayHere() {
+    setShowStayPrompt(false);
+    resetFormFields();
+  }
+
+  function onLeave() {
+    router.push('/subjects');
+  }
+
   return (
     <form onSubmit={onSubmit} className="max-w-2xl">
+      {showStayPrompt && (
+        <div className="mb-4 rounded-lg border border-success bg-success/10 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-success">{t('stayPromptQuestion')}</p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onStayHere}
+              className="px-4 py-1.5 text-sm font-semibold text-primary-foreground bg-primary rounded-md"
+            >
+              {t('stayPromptYes')}
+            </button>
+            <button
+              type="button"
+              onClick={onLeave}
+              className="px-4 py-1.5 text-sm font-semibold text-foreground border border-border rounded-md bg-surface"
+            >
+              {t('stayPromptNo')}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-surface rounded-lg border border-border px-4 py-5 md:px-6 md:py-6 space-y-5">
         {/* Nom de la matière */}
         <div>
@@ -265,7 +307,7 @@ export default function AddSubjectForm({
           </Link>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || showStayPrompt}
             className="px-6 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md disabled:opacity-50"
           >
             {submitting ? t('saving') : isEdit ? t('saveChanges') : t('create')}

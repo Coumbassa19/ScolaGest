@@ -801,7 +801,10 @@
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
-      "save": "Save"
+      "save": "Save",
+      "stayPromptQuestion": "Student saved! Want to stay here to add another student?",
+      "stayPromptYes": "Yes",
+      "stayPromptNo": "No"
     }
   },
   "teachers": {
@@ -878,7 +881,10 @@
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
-      "add": "Add"
+      "add": "Add",
+      "stayPromptQuestion": "Teacher saved! Want to stay here to add another teacher?",
+      "stayPromptYes": "Yes",
+      "stayPromptNo": "No"
     }
   },
   "staff": {
@@ -931,7 +937,10 @@
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
-      "add": "Add"
+      "add": "Add",
+      "stayPromptQuestion": "Staff member saved! Want to stay here to add another one?",
+      "stayPromptYes": "Yes",
+      "stayPromptNo": "No"
     }
   },
   "classes": {
@@ -1134,6 +1143,9 @@
       "errorTeacherNotLinked": "No teacher profile is linked to this account.",
       "errorAlreadyValidated": "These grades were already validated. See the direction with the paper grade sheet for any correction.",
       "success": "Grades saved.",
+      "stayPromptQuestion": "Grades saved! Want to stay here to enter more grades (another homework round or the exam)?",
+      "stayPromptYes": "Yes",
+      "stayPromptNo": "No",
       "back": "Back",
       "saving": "Saving…",
       "save": "Save Grades",
@@ -1808,7 +1820,10 @@
       "errorInvalidAmount": "Enter a valid amount.",
       "errorInvalidMotif": "Enter a reason.",
       "errorNetwork": "Network error. Please try again.",
-      "savedToast": "Payment recorded successfully."
+      "savedToast": "Payment recorded successfully.",
+      "stayPromptQuestion": "Payment saved! Want to stay here to record another payment?",
+      "stayPromptYes": "Yes",
+      "stayPromptNo": "No"
     },
     "received": {
       "title": "Revenue Received",
@@ -1885,7 +1900,10 @@
       "cancel": "Cancel",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
-      "create": "Create Subject"
+      "create": "Create Subject",
+      "stayPromptQuestion": "Subject created! Want to stay here to add another subject?",
+      "stayPromptYes": "Yes",
+      "stayPromptNo": "No"
     }
   },
   "absences": {

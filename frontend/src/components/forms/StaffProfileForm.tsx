@@ -52,6 +52,16 @@ export default function StaffProfileForm({
   const [salaireMensuel, setSalaireMensuel] = useState(initialData?.salaireMensuel ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showStayPrompt, setShowStayPrompt] = useState(false);
+
+  function resetFormFields() {
+    setNom('');
+    setPrenom('');
+    setPoste('');
+    setTelephone('');
+    setEmail('');
+    setSalaireMensuel('');
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -84,7 +94,7 @@ export default function StaffProfileForm({
       } else {
         await api('/api/staff', { method: 'POST', body });
         toast(tCommon('savedToast'), 'success');
-        router.push('/staff');
+        setShowStayPrompt(true);
       }
       router.refresh();
     } catch (err) {
@@ -99,8 +109,39 @@ export default function StaffProfileForm({
     }
   }
 
+  function onStayHere() {
+    setShowStayPrompt(false);
+    resetFormFields();
+  }
+
+  function onLeave() {
+    router.push('/staff');
+  }
+
   return (
     <form onSubmit={onSubmit} className="max-w-2xl space-y-6">
+      {showStayPrompt && (
+        <div className="rounded-lg border border-success bg-success/10 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-success">{t('stayPromptQuestion')}</p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onStayHere}
+              className="px-4 py-1.5 text-sm font-semibold text-primary-foreground bg-primary rounded-md"
+            >
+              {t('stayPromptYes')}
+            </button>
+            <button
+              type="button"
+              onClick={onLeave}
+              className="px-4 py-1.5 text-sm font-semibold text-foreground border border-border rounded-md bg-surface"
+            >
+              {t('stayPromptNo')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Personal info */}
       <div className="bg-surface rounded-lg border border-border px-6 py-5">
         <div className="mb-4 pb-4 border-b border-border">
@@ -223,7 +264,7 @@ export default function StaffProfileForm({
         </button>
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || showStayPrompt}
           className="px-6 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-md disabled:opacity-50"
         >
           {submitting ? t('saving') : isEdit ? t('saveChanges') : t('add')}

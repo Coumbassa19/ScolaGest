@@ -787,7 +787,10 @@
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
-      "save": "Enregistrer"
+      "save": "Enregistrer",
+      "stayPromptQuestion": "Élève enregistré ! Veux-tu rester ici pour ajouter un autre élève ?",
+      "stayPromptYes": "Oui",
+      "stayPromptNo": "Non"
     }
   },
   "teachers": {
@@ -864,7 +867,10 @@
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
-      "add": "Ajouter"
+      "add": "Ajouter",
+      "stayPromptQuestion": "Enseignant enregistré ! Veux-tu rester ici pour ajouter un autre enseignant ?",
+      "stayPromptYes": "Oui",
+      "stayPromptNo": "Non"
     }
   },
   "staff": {
@@ -917,7 +923,10 @@
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
-      "add": "Ajouter"
+      "add": "Ajouter",
+      "stayPromptQuestion": "Membre du personnel enregistré ! Veux-tu rester ici pour en ajouter un autre ?",
+      "stayPromptYes": "Oui",
+      "stayPromptNo": "Non"
     }
   },
   "classes": {
@@ -1120,6 +1129,9 @@
       "errorTeacherNotLinked": "Aucun profil enseignant n'est relié à ce compte.",
       "errorAlreadyValidated": "Ces notes ont déjà été validées. Rends-toi à la direction avec la fiche de note papier pour toute correction.",
       "success": "Notes enregistrées.",
+      "stayPromptQuestion": "Notes enregistrées ! Veux-tu rester ici pour saisir d'autres notes (un autre devoir ou la composition) ?",
+      "stayPromptYes": "Oui",
+      "stayPromptNo": "Non",
       "back": "Retour",
       "saving": "Enregistrement…",
       "save": "Enregistrer les notes",
@@ -1794,7 +1806,10 @@
       "errorInvalidAmount": "Saisis un montant valide.",
       "errorInvalidMotif": "Saisis un motif.",
       "errorNetwork": "Erreur réseau. Réessaie.",
-      "savedToast": "Paiement enregistré avec succès."
+      "savedToast": "Paiement enregistré avec succès.",
+      "stayPromptQuestion": "Paiement enregistré ! Veux-tu rester ici pour enregistrer un autre paiement ?",
+      "stayPromptYes": "Oui",
+      "stayPromptNo": "Non"
     },
     "received": {
       "title": "Revenus reçus",
@@ -1871,7 +1886,10 @@
       "cancel": "Annuler",
       "saving": "Enregistrement…",
       "saveChanges": "Enregistrer les modifications",
-      "create": "Créer la matière"
+      "create": "Créer la matière",
+      "stayPromptQuestion": "Matière créée ! Veux-tu rester ici pour ajouter une autre matière ?",
+      "stayPromptYes": "Oui",
+      "stayPromptNo": "Non"
     }
   },
   "absences": {

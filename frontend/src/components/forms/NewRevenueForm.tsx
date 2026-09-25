@@ -53,10 +53,23 @@ export default function NewRevenueForm({
   const [source, setSource] = useState('Scolarité');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showStayPrompt, setShowStayPrompt] = useState(false);
+  // Tracks totalMoisAvant locally so the impact panel stays correct across a
+  // stay-and-add-another loop — each confirmed payment folds into the base
+  // that the next one is computed against, instead of showing a stale figure
+  // from the page's initial server render.
+  const [baseTotal, setBaseTotal] = useState(totalMoisAvant);
 
   const newAmount = Number(montant) || 0;
-  const totalMoisApres = totalMoisAvant + newAmount;
+  const totalMoisApres = baseTotal + newAmount;
   const pctGoal = Math.min(100, Math.round((totalMoisApres / MONTHLY_GOAL) * 100));
+
+  function resetFormFields() {
+    setMontant('');
+    setMoyenPaiement('ORANGE_MONEY');
+    setStudentId('');
+    setSource('Scolarité');
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -81,7 +94,9 @@ export default function NewRevenueForm({
         },
       });
       toast(t('savedToast'), 'success');
-      router.push('/revenue-received');
+      setBaseTotal((prev) => prev + newAmount);
+      setShowStayPrompt(true);
+      router.refresh();
     } catch (err) {
       toast(err instanceof ApiError ? err.message : t('errorNetwork'), 'error');
     } finally {
@@ -89,8 +104,39 @@ export default function NewRevenueForm({
     }
   }
 
+  function onStayHere() {
+    setShowStayPrompt(false);
+    resetFormFields();
+  }
+
+  function onLeave() {
+    router.push('/revenue-received');
+  }
+
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
+      {showStayPrompt && (
+        <div className="col-span-1 lg:col-span-5 rounded-lg border border-success bg-success/10 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-success">{t('stayPromptQuestion')}</p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onStayHere}
+              className="px-4 py-1.5 text-sm font-semibold text-primary-foreground bg-primary rounded-md"
+            >
+              {t('stayPromptYes')}
+            </button>
+            <button
+              type="button"
+              onClick={onLeave}
+              className="px-4 py-1.5 text-sm font-semibold text-foreground border border-border rounded-md bg-surface"
+            >
+              {t('stayPromptNo')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* LEFT: Form */}
       <div className="col-span-1 lg:col-span-3 space-y-6">
         {/* Amount input */}
@@ -296,7 +342,7 @@ export default function NewRevenueForm({
         {/* CTA */}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || showStayPrompt}
           className="w-full py-4 bg-primary text-primary-foreground font-headings font-semibold text-lg rounded-xl flex items-center justify-center gap-3 disabled:opacity-50"
         >
           <Icon i="check-circle" size={22} />
