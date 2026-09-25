@@ -215,7 +215,19 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-const base = global.__prismaBase ?? new PrismaClient();
+// Prisma's own defaults (maxWait: 2000ms, timeout: 5000ms) are tight for a
+// serverless Postgres (Neon) under real-world latency — a handful of
+// sequential queries inside an interactive $transaction (e.g.
+// syncSubjectTeacherAssignments, called from POST/PATCH /api/subjects) can
+// exceed 5s under load and surface as a raw P2028 "Transaction not found"
+// 500, discarding otherwise-valid work. Raised here once, at the client
+// level, so every one of the ~26 `$transaction()` call sites across the
+// codebase benefits without each needing its own override.
+const base =
+  global.__prismaBase ??
+  new PrismaClient({
+    transactionOptions: { maxWait: 5000, timeout: 15000 },
+  });
 
 // Cast back to the plain `PrismaClient` type: the runtime object is the
 // $extends()-wrapped client, but its API surface is identical, and every
