@@ -21,10 +21,20 @@ import { NextResponse, type NextRequest } from 'next/server';
 // harmless to allow even when unconfigured). Fonts are self-hosted via
 // next/font/google (downloaded at build time), so font-src is 'self' only —
 // no fonts.gstatic.com needed.
+//
+// 'unsafe-eval' is added to script-src ONLY outside production: React/Next
+// dev mode (Turbopack/webpack HMR, dev-mode call-stack reconstruction) uses
+// eval() for debugging tooling — "eval() is not supported in this
+// environment" console error otherwise. React itself guarantees it never
+// calls eval() in production, so this never weakens the CSP where it
+// actually matters.
 function buildCsp(nonce: string): string {
+  const scriptSrc = [`'self'`, `'nonce-${nonce}'`, `'strict-dynamic'`];
+  if (process.env.NODE_ENV !== 'production') scriptSrc.push(`'unsafe-eval'`);
+
   const directives = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src ${scriptSrc.join(' ')}`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' https://res.cloudinary.com data: blob:`,
     `font-src 'self'`,
