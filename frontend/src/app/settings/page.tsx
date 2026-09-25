@@ -21,6 +21,7 @@ import Sidebar from '@/components/Sidebar';
 import Icon from '@/components/global/Icon';
 import AcademicYearControl from '@/components/forms/AcademicYearControl';
 import AccountSecuritySection from '@/components/settings/AccountSecuritySection';
+import GradingWeightsForm from '@/components/forms/GradingWeightsForm';
 import SchoolSettingsForm from '@/components/forms/SchoolSettingsForm';
 import UserStatusToggle from '@/components/settings/UserStatusToggle';
 import { getSchoolSettings } from '@/lib/server/school-settings';
@@ -98,6 +99,14 @@ export default async function SettingsPage() {
 
             {/* Section: Informations de l'établissement */}
             <SchoolSettingsForm initialData={schoolSettings} />
+
+            {/* Section: Pondération des notes (devoirs vs composition) */}
+            <GradingWeightsForm
+              initialData={{
+                coefDevoir: schoolSettings.coefDevoir,
+                coefComposition: schoolSettings.coefComposition,
+              }}
+            />
 
             {/* Section: Calendrier académique */}
             <div className="bg-surface rounded-lg border border-border px-6 py-5">

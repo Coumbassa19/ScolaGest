@@ -453,6 +453,18 @@
       "homepageSectionHint": "Your logo only appears on the public homepage once at least 3 schools have enabled this option — it's normal not to see it right after checking the box.",
       "featuredOnHomepageLabel": "Show my school's logo on ScolaGest's public homepage"
     },
+    "grading": {
+      "title": "Grade Weighting",
+      "subtitle": "How a term's average blends homework grades and the exam",
+      "coefDevoirLabel": "Homework coefficient:",
+      "coefCompositionLabel": "Exam coefficient:",
+      "hint": "By default, the exam counts twice (coefficient 2) as much as the homework average (coefficient 1) — change these values if your school weights differently.",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Weighting saved.",
+      "errorInvalid": "Coefficients must be whole numbers between 1 and 20.",
+      "errorNetwork": "Network error. Please try again."
+    },
     "academicYear": {
       "currentLabel": "Current academic year:",
       "loading": "Loading…",
@@ -1085,7 +1097,9 @@
       "coeffAbbrev": "coeff. {value}",
       "bulletinLink": "Report Card",
       "footerClassAverage": "Class Average",
-      "validatedBadge": "Validated"
+      "validatedBadge": "Validated",
+      "devoirsHeader": "Homework",
+      "compositionHeader": "Exam"
     },
     "enter": {
       "backLink": "GRADES & RESULTS",
@@ -1094,6 +1108,12 @@
       "noSubjects": "No subjects have been created yet — create one before entering grades."
     },
     "enterForm": {
+      "typeLabel": "Assessment type:",
+      "typeDevoir": "Homework",
+      "typeComposition": "Exam",
+      "labelFieldLabel": "Homework label:",
+      "labelFieldPlaceholder": "e.g. Homework 1",
+      "labelFieldHint": "Use the same label as an existing homework round to correct it, or keep the suggestion for a new one.",
       "classLabel": "Class:",
       "subjectLabel": "Subject:",
       "periodLabel": "Term:",
@@ -1105,6 +1125,7 @@
       "loadingStudents": "Loading students…",
       "noStudentsInClass": "No students in this class.",
       "errorSelectRequired": "Select a class and a subject.",
+      "errorLabelRequired": "Enter a label for this homework round.",
       "errorAtLeastOneGrade": "Enter at least one grade.",
       "errorGradeRange": "Grades must be numbers between 0 and {max}.",
       "errorNetwork": "Network error. Please try again.",
@@ -1174,7 +1195,9 @@
     "dobLabel": "Date of Birth",
     "subjectHeader": "Subject",
     "coeffHeader": "Coeff.",
-    "gradeHeader": "Grade",
+    "devoirsHeader": "Homework",
+    "compositionHeader": "Exam",
+    "gradeHeader": "Average",
     "appreciationHeader": "Remark",
     "noGrades": "No grades recorded for this term.",
     "generalAverage": "OVERALL AVERAGE",
@@ -1904,7 +1927,9 @@
     "noGrades": "No grades recorded for this period.",
     "subjectHeader": "Subject",
     "coeffHeader": "Coeff.",
-    "gradeHeader": "Grade",
+    "devoirsHeader": "Homework",
+    "compositionHeader": "Exam",
+    "gradeHeader": "Average",
     "appreciationHeader": "Appreciation",
     "generalAverage": "General average",
     "absencesTitle": "Absences",

@@ -29,23 +29,43 @@ interface StudentRow {
 interface GradeRow {
   studentId: string;
   subjectId: string;
+  type: string;
+  label: string;
   valeur: number;
 }
 
 // A locked/validated batch for some (classId, subjectId, periode,
-// anneeScolaire) — see GradeSubmission on the server. Only the fields the
-// UI needs to render a lock/correction banner.
+// anneeScolaire, type, label) — see GradeSubmission on the server. Only
+// the fields the UI needs to render a lock/correction banner.
 interface SubmissionRow {
   classId: string;
   subjectId: string;
   periode: string;
   anneeScolaire: string;
+  type: string;
+  label: string;
   submittedAt: string;
   submittedBy: { name: string | null; email: string } | null;
   correctedAt: string | null;
 }
 
 const PERIODE_VALUES = ['T1', 'T2', 'T3'] as const;
+const ASSESSMENT_TYPES = ['DEVOIR', 'COMPOSITION'] as const;
+type AssessmentType = (typeof ASSESSMENT_TYPES)[number];
+
+// "Devoir 1", "Devoir 2"... -> suggests the next free number for a NEW
+// devoir round, from whatever devoir labels already exist for this
+// subject/period/year. Doesn't touch differently-worded labels (a teacher
+// free-typed something else) — those just don't get auto-numbered.
+function suggestNextDevoirLabel(subjectGrades: GradeRow[]): string {
+  const numbers = subjectGrades
+    .filter((g) => g.type === 'DEVOIR')
+    .map((g) => /^Devoir (\d+)$/.exec(g.label)?.[1])
+    .filter((n): n is string => Boolean(n))
+    .map(Number);
+  const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+  return `Devoir ${next}`;
+}
 
 const gridCols = { gridTemplateColumns: '2fr 1fr' };
 
@@ -86,7 +106,16 @@ export default function EnterGradesForm({
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '');
   const [periode, setPeriode] = useState('T1');
   const [anneeScolaire, setAnneeScolaire] = useState(academicYears[0] ?? '2024-2025');
+  // Defaults to COMPOSITION so a school that hasn't started using devoirs
+  // yet sees exactly today's behavior: opening the form pre-fills the
+  // existing (pre-migration) grade, unchanged.
+  const [type, setType] = useState<AssessmentType>('COMPOSITION');
+  const [label, setLabel] = useState('Composition');
   const [students, setStudents] = useState<StudentRow[]>([]);
+  // All grades for this class/period/year (every subject, every batch) —
+  // fetched once per scope change; subject/type/label filtering happens
+  // client-side below, so switching those doesn't need a new request.
+  const [allGrades, setAllGrades] = useState<GradeRow[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [correctionNote, setCorrectionNote] = useState('');
@@ -117,25 +146,20 @@ export default function EnterGradesForm({
     };
   }, [classId]);
 
-  // Pre-fill existing grades for this class/subject/period so re-opening
-  // enter-grades shows what's already saved instead of blank inputs. Also
-  // fetches this scope's GradeSubmission rows so the form can lock itself
-  // (TEACHER) or show a correction banner (DIRECTION/ADMIN) without a
-  // separate round trip — see /api/grades's GET.
+  // Fetches every grade + GradeSubmission for this class/period/year (all
+  // subjects, all devoir/composition batches at once) so switching subject
+  // or assessment type below doesn't need another round trip — see
+  // /api/grades's GET.
   useEffect(() => {
-    if (!classId || !subjectId) return;
+    if (!classId) return;
     let cancelled = false;
     api<{ grades: GradeRow[]; submissions: SubmissionRow[] }>(
       `/api/grades?classId=${classId}&periode=${periode}&anneeScolaire=${anneeScolaire}`,
     )
       .then((data) => {
         if (cancelled) return;
-        const forSubject = data.grades.filter((g) => g.subjectId === subjectId);
-        const next: Record<string, string> = {};
-        for (const g of forSubject) next[g.studentId] = String(g.valeur);
-        setNotes(next);
+        setAllGrades(data.grades);
         setSubmissions(data.submissions);
-        setCorrectionNote('');
       })
       .catch(() => {
         /* best-effort pre-fill only */
@@ -143,18 +167,37 @@ export default function EnterGradesForm({
     return () => {
       cancelled = true;
     };
-  }, [classId, subjectId, periode, anneeScolaire]);
+  }, [classId, periode, anneeScolaire]);
+
+  const subjectGrades = allGrades.filter((g) => g.subjectId === subjectId);
+
+  // Pre-fill the grid with whatever's already saved for the CURRENT batch
+  // (subject + assessment type + label) so re-opening it shows what's
+  // there instead of blank inputs. Local edits reset whenever the batch
+  // itself changes (any of these four change).
+  useEffect(() => {
+    const forBatch = subjectGrades.filter((g) => g.type === type && g.label === label);
+    const next: Record<string, string> = {};
+    for (const g of forBatch) next[g.studentId] = String(g.valeur);
+    setNotes(next);
+    setCorrectionNote('');
+  }, [allGrades, subjectId, type, label]);
 
   const teacherOfSubject = subjects.find((s) => s.id === subjectId);
   const selectedClass = classes.find((c) => c.id === classId);
   const noteMax = selectedClass?.noteMax ?? 20;
+  const existingDevoirLabels = Array.from(
+    new Set(subjectGrades.filter((g) => g.type === 'DEVOIR').map((g) => g.label)),
+  );
 
   const currentSubmission = submissions.find(
     (s) =>
       s.classId === classId &&
       s.subjectId === subjectId &&
       s.periode === periode &&
-      s.anneeScolaire === anneeScolaire,
+      s.anneeScolaire === anneeScolaire &&
+      s.type === type &&
+      s.label === label,
   );
   const isTeacher = role === 'TEACHER';
   // A TEACHER can never re-edit an already-validated batch — see the
@@ -176,6 +219,10 @@ export default function EnterGradesForm({
     if (isLocked) return; // form is disabled in this state, but guard anyway
     if (!classId || !subjectId) {
       setError(t('errorSelectRequired'));
+      return;
+    }
+    if (type === 'DEVOIR' && !label.trim()) {
+      setError(t('errorLabelRequired'));
       return;
     }
     const entries = students
@@ -200,6 +247,8 @@ export default function EnterGradesForm({
           subjectId,
           periode,
           anneeScolaire,
+          type,
+          label,
           entries,
           ...(isCorrectionMode && correctionNote.trim()
             ? { correctionNote: correctionNote.trim() }
@@ -226,6 +275,51 @@ export default function EnterGradesForm({
     <form onSubmit={onSubmit}>
       {/* Filters */}
       <div className="px-4 py-4 md:px-8 border-b border-border bg-surface space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">
+              {t('typeLabel')}
+            </label>
+            <select
+              value={type}
+              onChange={(e) => {
+                const next = e.target.value as AssessmentType;
+                setType(next);
+                setLabel(
+                  next === 'COMPOSITION' ? 'Composition' : suggestNextDevoirLabel(subjectGrades),
+                );
+              }}
+              className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm text-foreground"
+            >
+              {ASSESSMENT_TYPES.map((value) => (
+                <option key={value} value={value}>
+                  {t(value === 'DEVOIR' ? 'typeDevoir' : 'typeComposition')}
+                </option>
+              ))}
+            </select>
+          </div>
+          {type === 'DEVOIR' && (
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">
+                {t('labelFieldLabel')}
+              </label>
+              <input
+                type="text"
+                list="devoir-labels"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder={t('labelFieldPlaceholder')}
+                className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm text-foreground"
+              />
+              <datalist id="devoir-labels">
+                {existingDevoirLabels.map((l) => (
+                  <option key={l} value={l} />
+                ))}
+              </datalist>
+              <p className="text-xs text-muted-foreground mt-1">{t('labelFieldHint')}</p>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1.5">

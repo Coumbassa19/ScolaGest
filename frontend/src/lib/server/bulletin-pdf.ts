@@ -14,11 +14,17 @@ import {
 } from '@/lib/bulletin-format';
 import { formatRang } from '@/lib/rang';
 import { drawCoverImage } from '@/lib/server/pdf-image';
+import { computeMoyenneGenerale } from '@/lib/server/grades/moyenne';
 
 export interface BulletinPdfGrade {
   subjectNom: string;
   coefficient: number;
-  valeur: number;
+  /** Arithmetic mean of this subject's devoir rows, or null if none yet. */
+  moyenneDevoirs: number | null;
+  /** This subject's composition value, or null if not entered yet. */
+  composition: number | null;
+  /** Blend of moyenneDevoirs/composition via the school's coefficients — see src/lib/server/grades/moyenne.ts. */
+  moyenne: number | null;
 }
 
 export interface BulletinPdfSchool {
@@ -192,11 +198,20 @@ function drawOnePage(
     .stroke();
   y += 14;
 
-  // Grades table
-  const colMatiere = width * 0.4;
-  const colCoeff = width * 0.15;
-  const colNote = width * 0.15;
-  const colAppr = width * 0.3;
+  // Grades table — Matière stays widest (longest text), Appréciation wide
+  // enough for French appreciation words; Devoirs/Composition/Moyenne
+  // split the rest evenly.
+  const colMatiere = width * 0.32;
+  const colCoeff = width * 0.1;
+  const colDevoirs = width * 0.14;
+  const colComposition = width * 0.14;
+  const colNote = width * 0.14;
+  const colAppr = width * 0.16;
+  // Computed once, reused by both the shaded "MOYENNE GÉNÉRALE" row and the
+  // decision box below — previously each recomputed this independently.
+  const moyenne = computeMoyenneGenerale(
+    student.grades.map((g) => ({ moyenne: g.moyenne, coefficient: g.coefficient })),
+  );
   if (student.grades.length === 0) {
     doc
       .fontSize(9.5)
@@ -211,7 +226,11 @@ function drawOnePage(
     x += colMatiere;
     doc.text('COEFF.', x, y, { width: colCoeff, align: 'center' });
     x += colCoeff;
-    doc.text('NOTE', x, y, { width: colNote, align: 'center' });
+    doc.text('DEVOIRS', x, y, { width: colDevoirs, align: 'center' });
+    x += colDevoirs;
+    doc.text('COMPOSITION', x, y, { width: colComposition, align: 'center' });
+    x += colComposition;
+    doc.text('MOYENNE', x, y, { width: colNote, align: 'center' });
     x += colNote;
     doc.text('APPRÉCIATION', x, y, { width: colAppr, align: 'center' });
     y += 13;
@@ -235,12 +254,28 @@ function drawOnePage(
       x += colMatiere;
       doc.text(String(g.coefficient), x, y, { width: colCoeff, align: 'center' });
       x += colCoeff;
-      doc.text(`${g.valeur}/${noteMax}`, x, y, { width: colNote, align: 'center' });
+      doc.text(g.moyenneDevoirs !== null ? g.moyenneDevoirs.toFixed(1) : '—', x, y, {
+        width: colDevoirs,
+        align: 'center',
+      });
+      x += colDevoirs;
+      doc.text(g.composition !== null ? String(g.composition) : '—', x, y, {
+        width: colComposition,
+        align: 'center',
+      });
+      x += colComposition;
+      doc.text(g.moyenne !== null ? `${g.moyenne.toFixed(1)}/${noteMax}` : '—', x, y, {
+        width: colNote,
+        align: 'center',
+      });
       x += colNote;
       doc
         .font('Helvetica')
         .fillColor(COLORS.muted)
-        .text(getAppreciation(g.valeur, noteMax), x, y, { width: colAppr, align: 'center' });
+        .text(g.moyenne !== null ? getAppreciation(g.moyenne, noteMax) : '—', x, y, {
+          width: colAppr,
+          align: 'center',
+        });
       y += 17;
       doc
         .moveTo(left, y - 4)
@@ -252,8 +287,6 @@ function drawOnePage(
 
     // Moyenne générale row (shaded)
     const totalCoeff = student.grades.reduce((s, g) => s + g.coefficient, 0);
-    const totalPoints = student.grades.reduce((s, g) => s + g.valeur * g.coefficient, 0);
-    const moyenne = totalCoeff > 0 ? totalPoints / totalCoeff : null;
 
     doc.rect(left, y, width, 22).fill(COLORS.shade);
     x = left;
@@ -261,7 +294,7 @@ function drawOnePage(
     doc.text('MOYENNE GÉNÉRALE', x + 4, y + 6, { width: colMatiere - 8 });
     x += colMatiere;
     doc.text(String(totalCoeff), x, y + 6, { width: colCoeff, align: 'center' });
-    x += colCoeff;
+    x += colCoeff + colDevoirs + colComposition;
     doc
       .fillColor(COLORS.primary)
       .text(moyenne !== null ? `${moyenne.toFixed(2)}/${noteMax}` : '—', x, y + 6, {
@@ -277,10 +310,6 @@ function drawOnePage(
       });
     y += 34;
   }
-
-  const totalCoeffForDecision = student.grades.reduce((s, g) => s + g.coefficient, 0);
-  const totalPointsForDecision = student.grades.reduce((s, g) => s + g.valeur * g.coefficient, 0);
-  const moyenne = totalCoeffForDecision > 0 ? totalPointsForDecision / totalCoeffForDecision : null;
 
   // Three boxes: Observations / Décision / Rang
   const boxGap = 12;

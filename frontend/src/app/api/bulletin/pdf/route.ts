@@ -17,6 +17,7 @@ import { requireStaff } from '@/lib/server/middleware/require-staff';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 import { computeClassRanking } from '@/lib/server/bulletin';
 import { buildBulletinsPdf, type BulletinPdfStudent } from '@/lib/server/bulletin-pdf';
+import { buildMoyenneMatiereMap, computeMoyenneGenerale } from '@/lib/server/grades/moyenne';
 import { defaultObservation } from '@/lib/bulletin-format';
 import { getSchoolSettings } from '@/lib/server/school-settings';
 import { requireSchoolId } from '@/lib/server/tenant/context';
@@ -57,20 +58,38 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const [grades, savedRemark, { rankByStudent, totalStudents }, school] = await Promise.all([
+    const school = await getSchoolSettings(prisma, schoolId);
+    const [grades, savedRemark, { rankByStudent, totalStudents }] = await Promise.all([
       prisma.grade.findMany({
         where: { studentId, periode, anneeScolaire },
         include: { subject: true },
         orderBy: { subject: { nom: 'asc' } },
       }),
       prisma.bulletinRemark.findUnique({ where: { studentId_periode: { studentId, periode } } }),
-      computeClassRanking(prisma, student.classId, periode, anneeScolaire),
-      getSchoolSettings(prisma, schoolId),
+      computeClassRanking(
+        prisma,
+        student.classId,
+        periode,
+        anneeScolaire,
+        school.coefDevoir,
+        school.coefComposition,
+      ),
     ]);
 
-    const totalCoeff = grades.reduce((sum, g) => sum + g.subject.coefficient, 0);
-    const totalPoints = grades.reduce((sum, g) => sum + g.valeur * g.subject.coefficient, 0);
-    const moyenne = totalCoeff > 0 ? totalPoints / totalCoeff : null;
+    const subjectsUnique = Array.from(
+      new Map(grades.map((g) => [g.subjectId, g.subject])).values(),
+    );
+    const moyenneMatiereByStudentSubject = buildMoyenneMatiereMap(
+      grades,
+      school.coefDevoir,
+      school.coefComposition,
+    );
+    const moyenne = computeMoyenneGenerale(
+      subjectsUnique.map((s) => ({
+        moyenne: moyenneMatiereByStudentSubject.get(`${studentId}:${s.id}`) ?? null,
+        coefficient: s.coefficient,
+      })),
+    );
     const rank = rankByStudent.get(student.id);
 
     const pdfStudent: BulletinPdfStudent = {
@@ -80,11 +99,20 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       matricule: student.matricule,
       className: student.schoolClass.name,
       dateNaissance: student.dateNaissance,
-      grades: grades.map((g) => ({
-        subjectNom: g.subject.nom,
-        coefficient: g.subject.coefficient,
-        valeur: g.valeur,
-      })),
+      grades: subjectsUnique.map((s) => {
+        const devoirs = grades.filter((g) => g.subjectId === s.id && g.type === 'DEVOIR');
+        const composition = grades.find((g) => g.subjectId === s.id && g.type === 'COMPOSITION');
+        return {
+          subjectNom: s.nom,
+          coefficient: s.coefficient,
+          moyenneDevoirs:
+            devoirs.length > 0
+              ? devoirs.reduce((sum, d) => sum + d.valeur, 0) / devoirs.length
+              : null,
+          composition: composition?.valeur ?? null,
+          moyenne: moyenneMatiereByStudentSubject.get(`${studentId}:${s.id}`) ?? null,
+        };
+      }),
       observation:
         savedRemark?.observation ?? defaultObservation(moyenne, student.schoolClass.cycle.noteMax),
       rang: rank?.rang ?? null,

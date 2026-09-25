@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getTranslations, getLocale } from 'next-intl/server';
 import ParentHeader from '@/components/ParentHeader';
 import { getAppreciationKey } from '@/lib/bulletin-format';
+import { buildMoyenneMatiereMap, computeMoyenneGenerale } from '@/lib/server/grades/moyenne';
 import { getSchoolSettings } from '@/lib/server/school-settings';
 import { requireParentPage } from '@/lib/server/middleware/require-parent';
 
@@ -118,9 +119,30 @@ export default async function ParentPortalPage({
     ],
   );
 
-  const totalCoeff = grades.reduce((sum, g) => sum + g.subject.coefficient, 0);
-  const totalPoints = grades.reduce((sum, g) => sum + g.valeur * g.subject.coefficient, 0);
-  const moyenne = totalCoeff > 0 ? totalPoints / totalCoeff : null;
+  const subjectsUnique = Array.from(new Map(grades.map((g) => [g.subjectId, g.subject])).values());
+  const moyenneMatiereByStudentSubject = buildMoyenneMatiereMap(
+    grades,
+    schoolInfo.coefDevoir,
+    schoolInfo.coefComposition,
+  );
+  function moyenneDevoirsFor(subjectId: string): number | null {
+    const devoirs = grades.filter((g) => g.subjectId === subjectId && g.type === 'DEVOIR');
+    return devoirs.length > 0
+      ? devoirs.reduce((sum, d) => sum + d.valeur, 0) / devoirs.length
+      : null;
+  }
+  function compositionFor(subjectId: string): number | null {
+    return (
+      grades.find((g) => g.subjectId === subjectId && g.type === 'COMPOSITION')?.valeur ?? null
+    );
+  }
+  const totalCoeff = subjectsUnique.reduce((sum, s) => sum + s.coefficient, 0);
+  const moyenne = computeMoyenneGenerale(
+    subjectsUnique.map((s) => ({
+      moyenne: moyenneMatiereByStudentSubject.get(`${activeStudent.id}:${s.id}`) ?? null,
+      coefficient: s.coefficient,
+    })),
+  );
 
   const dueScolarite = tuitionPlan?.montantAnnuel ?? null;
   const paidScolarite = scolaritePaidAgg._sum.montant ?? 0;
@@ -196,7 +218,7 @@ export default async function ParentPortalPage({
             <p className="px-5 py-6 text-sm text-muted-foreground text-center">{t('noGrades')}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[480px]">
+              <table className="w-full min-w-[620px]">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-5 py-2 text-xs font-semibold text-muted-foreground uppercase">
@@ -204,6 +226,12 @@ export default async function ParentPortalPage({
                     </th>
                     <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
                       {t('coeffHeader')}
+                    </th>
+                    <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                      {t('devoirsHeader')}
+                    </th>
+                    <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                      {t('compositionHeader')}
                     </th>
                     <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
                       {t('gradeHeader')}
@@ -214,22 +242,38 @@ export default async function ParentPortalPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {grades.map((g) => (
-                    <tr key={g.id} className="border-b border-border">
-                      <td className="px-5 py-2.5 text-sm font-semibold text-foreground">
-                        {g.subject.nom}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-center text-foreground">
-                        {g.subject.coefficient}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-center font-semibold text-foreground">
-                        {g.valeur}/{noteMax}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-center text-muted-foreground">
-                        {tBulletin(`appreciation.${getAppreciationKey(g.valeur, noteMax)}`)}
-                      </td>
-                    </tr>
-                  ))}
+                  {subjectsUnique.map((s) => {
+                    const moyenneMatiere =
+                      moyenneMatiereByStudentSubject.get(`${activeStudent.id}:${s.id}`) ?? null;
+                    const moyenneDevoirs = moyenneDevoirsFor(s.id);
+                    const composition = compositionFor(s.id);
+                    return (
+                      <tr key={s.id} className="border-b border-border">
+                        <td className="px-5 py-2.5 text-sm font-semibold text-foreground">
+                          {s.nom}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-center text-foreground">
+                          {s.coefficient}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-center text-foreground">
+                          {moyenneDevoirs !== null ? moyenneDevoirs.toFixed(1) : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-center text-foreground">
+                          {composition !== null ? composition : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-center font-semibold text-foreground">
+                          {moyenneMatiere !== null ? moyenneMatiere.toFixed(1) : '—'}/{noteMax}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-center text-muted-foreground">
+                          {moyenneMatiere !== null
+                            ? tBulletin(
+                                `appreciation.${getAppreciationKey(moyenneMatiere, noteMax)}`,
+                              )
+                            : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   <tr className="bg-muted">
                     <td className="px-5 py-2.5 text-sm font-semibold text-foreground">
                       {t('generalAverage')}
@@ -237,6 +281,8 @@ export default async function ParentPortalPage({
                     <td className="px-3 py-2.5 text-sm text-center font-semibold text-foreground">
                       {totalCoeff}
                     </td>
+                    <td className="px-3 py-2.5 text-sm text-center text-muted-foreground">—</td>
+                    <td className="px-3 py-2.5 text-sm text-center text-muted-foreground">—</td>
                     <td className="px-3 py-2.5 text-sm text-center font-semibold text-primary">
                       {moyenne !== null ? moyenne.toFixed(2) : '—'}/{noteMax}
                     </td>

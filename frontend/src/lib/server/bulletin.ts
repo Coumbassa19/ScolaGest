@@ -9,6 +9,7 @@
 // without a moyenne yet aren't ranked.
 import 'server-only';
 import type { PrismaClient } from '@prisma/client';
+import { buildMoyenneMatiereMap, computeMoyenneGenerale } from '@/lib/server/grades/moyenne';
 
 export interface ClassRankEntry {
   moyenne: number | null;
@@ -26,6 +27,8 @@ export async function computeClassRanking(
   classId: string,
   periode: string,
   anneeScolaire: string,
+  coefDevoir: number,
+  coefComposition: number,
 ): Promise<ClassRanking> {
   const [classmates, classGrades] = await Promise.all([
     prisma.student.findMany({ where: { classId }, select: { id: true } }),
@@ -35,8 +38,15 @@ export async function computeClassRanking(
     }),
   ]);
 
-  const noteByStudentSubject = new Map<string, number>();
-  for (const g of classGrades) noteByStudentSubject.set(`${g.studentId}:${g.subjectId}`, g.valeur);
+  // Blends each subject's devoirs+composition into one "moyenne matière"
+  // (WITHIN a subject) before feeding it into the across-subjects average
+  // below (WEIGHTED BY Subject.coefficient) — two different axes, see
+  // src/lib/server/grades/moyenne.ts's module comment.
+  const moyenneMatiereByStudentSubject = buildMoyenneMatiereMap(
+    classGrades,
+    coefDevoir,
+    coefComposition,
+  );
   const subjectCoeffById = new Map<string, number>();
   for (const g of classGrades) {
     if (!subjectCoeffById.has(g.subjectId))
@@ -44,16 +54,11 @@ export async function computeClassRanking(
   }
 
   function moyenneFor(studentId: string): number | null {
-    let total = 0;
-    let coeffTotal = 0;
-    for (const [subjectId, coefficient] of subjectCoeffById) {
-      const note = noteByStudentSubject.get(`${studentId}:${subjectId}`);
-      if (note !== undefined) {
-        total += note * coefficient;
-        coeffTotal += coefficient;
-      }
-    }
-    return coeffTotal > 0 ? total / coeffTotal : null;
+    const subjectAverages = Array.from(subjectCoeffById, ([subjectId, coefficient]) => ({
+      moyenne: moyenneMatiereByStudentSubject.get(`${studentId}:${subjectId}`) ?? null,
+      coefficient,
+    }));
+    return computeMoyenneGenerale(subjectAverages);
   }
 
   const withMoyenne = classmates.map((c) => ({ studentId: c.id, moyenne: moyenneFor(c.id) }));

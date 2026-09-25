@@ -1,7 +1,10 @@
 // POST /api/grades/import — bulk-save grades from an uploaded Excel
-//      (.xlsx/.xls) or CSV file for one class/period/year, all subjects at
-//      once (enter-grades only ever handles one subject at a time — this is
-//      the "grade a whole class in one file" path). See
+//      (.xlsx/.xls) or CSV file for one class/period/year/assessment batch
+//      (type + label — DEVOIR or COMPOSITION, see Grade in
+//      prisma/schema.prisma), all subjects at once (enter-grades only ever
+//      handles one subject at a time — this is the "grade a whole class in
+//      one file" path). One import = one batch, chosen once before upload
+//      (not per cell) — same as manual entry. See
 //      src/lib/grades-import-columns.ts for the expected column layout,
 //      shared with the downloadable template
 //      (GET /api/grades/import/template) and the on-page format preview.
@@ -53,6 +56,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const classId = form?.get('classId');
     const periode = form?.get('periode');
     const anneeScolaire = form?.get('anneeScolaire');
+    const type = form?.get('type');
+    const rawLabel = form?.get('label');
 
     if (
       !(file instanceof File) ||
@@ -61,16 +66,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       typeof periode !== 'string' ||
       !PERIODES.includes(periode) ||
       typeof anneeScolaire !== 'string' ||
-      !anneeScolaire
+      !anneeScolaire ||
+      typeof type !== 'string' ||
+      (type !== 'DEVOIR' && type !== 'COMPOSITION') ||
+      typeof rawLabel !== 'string' ||
+      !rawLabel.trim()
     ) {
       return NextResponse.json(
         {
           error: 'VALIDATION_FAILED',
-          message: 'Fichier, classe, période et année scolaire sont obligatoires.',
+          message:
+            'Fichier, classe, période, année scolaire et type d’évaluation sont obligatoires.',
         },
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
+    // Hard invariant, not a nicety — see /api/grades: computeMoyenneMatiere
+    // assumes at most one COMPOSITION row per (student, subject, periode,
+    // anneeScolaire), so a client-supplied label is never trusted for it.
+    const label = type === 'COMPOSITION' ? 'Composition' : rawLabel.trim();
     if (file.size > MAX_FILE_BYTES) {
       return NextResponse.json(
         { error: 'FILE_TOO_LARGE', message: 'Fichier trop volumineux (max 5 Mo).' },
@@ -166,11 +180,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         try {
           await prisma.grade.upsert({
             where: {
-              studentId_subjectId_periode_anneeScolaire: {
+              studentId_subjectId_periode_anneeScolaire_type_label: {
                 studentId: student.id,
                 subjectId: note.subjectId,
                 periode,
                 anneeScolaire,
+                type,
+                label,
               },
             },
             update: { valeur: note.valeur, classId },
@@ -181,6 +197,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               classId,
               periode,
               anneeScolaire,
+              type,
+              label,
               valeur: note.valeur,
             },
           });

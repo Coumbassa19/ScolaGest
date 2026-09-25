@@ -22,6 +22,8 @@ export interface ImportGradeSubjectOption {
 }
 
 const PERIODE_VALUES = ['T1', 'T2', 'T3'] as const;
+const ASSESSMENT_TYPES = ['DEVOIR', 'COMPOSITION'] as const;
+type AssessmentType = (typeof ASSESSMENT_TYPES)[number];
 
 interface ImportResult {
   imported: number;
@@ -57,6 +59,9 @@ export default function ImportGradesForm({
 }) {
   const t = useTranslations('grades.importForm');
   const tp = useTranslations('grades.periods');
+  // Reuses the type/label copy from the manual entry form (same meaning,
+  // same wording an admin already saw once there) instead of duplicating it.
+  const tEnter = useTranslations('grades.enterForm');
   const PERIODES = PERIODE_VALUES.map((value) => ({ value, label: tp(value) }));
   const router = useRouter();
   const { toast } = useToast();
@@ -64,6 +69,11 @@ export default function ImportGradesForm({
   const [classId, setClassId] = useState(classes[0]?.id ?? '');
   const [periode, setPeriode] = useState('T1');
   const [anneeScolaire, setAnneeScolaire] = useState(academicYears[0] ?? '2024-2025');
+  // Defaults to COMPOSITION — a one-off import is most often the end-of-
+  // term composition sheet; devoirs are usually entered class-by-class via
+  // /enter-grades. See src/lib/server/grades/moyenne.ts.
+  const [type, setType] = useState<AssessmentType>('COMPOSITION');
+  const [label, setLabel] = useState('Composition');
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +98,10 @@ export default function ImportGradesForm({
       setError(t('errorSelectFile'));
       return;
     }
+    if (type === 'DEVOIR' && !label.trim()) {
+      setError(tEnter('errorLabelRequired'));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -96,6 +110,8 @@ export default function ImportGradesForm({
       body.set('classId', classId);
       body.set('periode', periode);
       body.set('anneeScolaire', anneeScolaire);
+      body.set('type', type);
+      body.set('label', type === 'COMPOSITION' ? 'Composition' : label.trim());
       const data = await api<ImportResult>('/api/grades/import', { method: 'POST', body });
       setResult(data);
       toast(t('importedSummary', { imported: data.imported, total: data.total }), 'success');
@@ -183,6 +199,42 @@ export default function ImportGradesForm({
         </div>
 
         <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                {tEnter('typeLabel')}
+              </label>
+              <select
+                value={type}
+                onChange={(e) => {
+                  const next = e.target.value as AssessmentType;
+                  setType(next);
+                  setLabel(next === 'COMPOSITION' ? 'Composition' : '');
+                }}
+                className={fieldClass}
+              >
+                {ASSESSMENT_TYPES.map((value) => (
+                  <option key={value} value={value}>
+                    {tEnter(value === 'DEVOIR' ? 'typeDevoir' : 'typeComposition')}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {type === 'DEVOIR' && (
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  {tEnter('labelFieldLabel')}
+                </label>
+                <input
+                  type="text"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder={tEnter('labelFieldPlaceholder')}
+                  className={fieldClass}
+                />
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">

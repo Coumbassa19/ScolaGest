@@ -19,6 +19,7 @@ import { requireStaff } from '@/lib/server/middleware/require-staff';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 import { computeClassRanking } from '@/lib/server/bulletin';
 import { buildBulletinsPdf, type BulletinPdfStudent } from '@/lib/server/bulletin-pdf';
+import { buildMoyenneMatiereMap, computeMoyenneGenerale } from '@/lib/server/grades/moyenne';
 import { defaultObservation } from '@/lib/bulletin-format';
 import { getSchoolSettings } from '@/lib/server/school-settings';
 import { requireSchoolId } from '@/lib/server/tenant/context';
@@ -48,7 +49,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const [schoolClass, students, grades, remarks, ranking, school] = await Promise.all([
+    const school = await getSchoolSettings(prisma, schoolId);
+    const [schoolClass, students, grades, remarks, ranking] = await Promise.all([
       prisma.schoolClass.findUnique({ where: { id: classId }, include: { cycle: true } }),
       prisma.student.findMany({
         where: { classId },
@@ -60,8 +62,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         orderBy: { subject: { nom: 'asc' } },
       }),
       prisma.bulletinRemark.findMany({ where: { periode, student: { classId } } }),
-      computeClassRanking(prisma, classId, periode, anneeScolaire),
-      getSchoolSettings(prisma, schoolId),
+      computeClassRanking(
+        prisma,
+        classId,
+        periode,
+        anneeScolaire,
+        school.coefDevoir,
+        school.coefComposition,
+      ),
     ]);
 
     if (!schoolClass) {
@@ -85,15 +93,23 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
     const remarkByStudent = new Map(remarks.map((r) => [r.studentId, r.observation]));
     const { rankByStudent, totalStudents } = ranking;
+    const moyenneMatiereByStudentSubject = buildMoyenneMatiereMap(
+      grades,
+      school.coefDevoir,
+      school.coefComposition,
+    );
 
     const pdfStudents: BulletinPdfStudent[] = students.map((s) => {
       const studentGrades = gradesByStudent.get(s.id) ?? [];
-      const totalCoeff = studentGrades.reduce((sum, g) => sum + g.subject.coefficient, 0);
-      const totalPoints = studentGrades.reduce(
-        (sum, g) => sum + g.valeur * g.subject.coefficient,
-        0,
+      const subjectsUnique = Array.from(
+        new Map(studentGrades.map((g) => [g.subjectId, g.subject])).values(),
       );
-      const moyenne = totalCoeff > 0 ? totalPoints / totalCoeff : null;
+      const moyenne = computeMoyenneGenerale(
+        subjectsUnique.map((subj) => ({
+          moyenne: moyenneMatiereByStudentSubject.get(`${s.id}:${subj.id}`) ?? null,
+          coefficient: subj.coefficient,
+        })),
+      );
       const rank = rankByStudent.get(s.id);
       return {
         nom: s.nom,
@@ -102,11 +118,24 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         matricule: s.matricule,
         className: schoolClass.name,
         dateNaissance: s.dateNaissance,
-        grades: studentGrades.map((g) => ({
-          subjectNom: g.subject.nom,
-          coefficient: g.subject.coefficient,
-          valeur: g.valeur,
-        })),
+        grades: subjectsUnique.map((subj) => {
+          const devoirs = studentGrades.filter(
+            (g) => g.subjectId === subj.id && g.type === 'DEVOIR',
+          );
+          const composition = studentGrades.find(
+            (g) => g.subjectId === subj.id && g.type === 'COMPOSITION',
+          );
+          return {
+            subjectNom: subj.nom,
+            coefficient: subj.coefficient,
+            moyenneDevoirs:
+              devoirs.length > 0
+                ? devoirs.reduce((sum, d) => sum + d.valeur, 0) / devoirs.length
+                : null,
+            composition: composition?.valeur ?? null,
+            moyenne: moyenneMatiereByStudentSubject.get(`${s.id}:${subj.id}`) ?? null,
+          };
+        }),
         observation:
           remarkByStudent.get(s.id) ?? defaultObservation(moyenne, schoolClass.cycle.noteMax),
         rang: rank?.rang ?? null,

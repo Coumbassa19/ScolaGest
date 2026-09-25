@@ -10,6 +10,9 @@ import { MobileCardList, CardField } from '@/components/MobileCardList';
 import { formatRang } from '@/lib/rang';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
 import { getTeacherClassIds, getTeacherSubjectIds } from '@/lib/server/permissions/teacher-scope';
+import { buildMoyenneMatiereMap, computeMoyenneGenerale } from '@/lib/server/grades/moyenne';
+import { getSchoolSettings } from '@/lib/server/school-settings';
+import { requireSchoolId } from '@/lib/server/tenant/context';
 
 export const metadata: Metadata = {
   title: 'Notes & Résultats',
@@ -38,6 +41,7 @@ export default async function GradesPage({
 }) {
   const staff = await requirePageAuth({ menuKey: 'grades' });
   const prisma = staff.user.prisma;
+  const schoolSettings = await getSchoolSettings(prisma, requireSchoolId(staff.user.schoolId));
   const isTeacher = staff.user.role === 'TEACHER';
   const [teacherClassIds, teacherSubjectIds] =
     isTeacher && staff.user.teacherId
@@ -111,8 +115,13 @@ export default async function GradesPage({
         },
         include: { subject: true },
       }),
+      // "Validé ✓" tracks specifically the Composition batch — the closest
+      // match to what this badge meant before devoirs/composition existed
+      // ("this subject is fully graded for the trimester"). Each Devoir
+      // round locks independently and isn't reflected here (see
+      // GradeSubmission's module comment).
       prisma.gradeSubmission.findMany({
-        where: { classId, periode, anneeScolaire },
+        where: { classId, periode, anneeScolaire, type: 'COMPOSITION' },
         select: { subjectId: true },
       }),
     ]);
@@ -136,20 +145,37 @@ export default async function GradesPage({
   }
   const subjects = [...subjectMap.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 
-  const noteByStudentSubject = new Map<string, number>();
-  for (const g of grades) noteByStudentSubject.set(`${g.studentId}:${g.subjectId}`, g.valeur);
+  // Cell value is the blended "moyenne matière" (devoirs + composition —
+  // see src/lib/server/grades/moyenne.ts), not a single raw entry anymore.
+  // /grades is a student×subject MATRIX (subjects as columns), so unlike
+  // the bulletin/PDF (subjects as rows) there's no room for a 3-column
+  // Devoirs/Composition/Moyenne breakdown here without badly breaking the
+  // layout — the breakdown is available as a hover tooltip instead (see
+  // gradeTooltip below).
+  const noteByStudentSubject = buildMoyenneMatiereMap(
+    grades,
+    schoolSettings.coefDevoir,
+    schoolSettings.coefComposition,
+  );
+
+  function gradeTooltip(studentId: string, subjectId: string, t: (key: string) => string): string {
+    const devoirs = grades.filter(
+      (g) => g.studentId === studentId && g.subjectId === subjectId && g.type === 'DEVOIR',
+    );
+    const composition = grades.find(
+      (g) => g.studentId === studentId && g.subjectId === subjectId && g.type === 'COMPOSITION',
+    );
+    const moyenneDevoirs =
+      devoirs.length > 0 ? devoirs.reduce((sum, d) => sum + d.valeur, 0) / devoirs.length : null;
+    return `${t('devoirsHeader')}: ${moyenneDevoirs !== null ? moyenneDevoirs.toFixed(1) : '—'} · ${t('compositionHeader')}: ${composition ? composition.valeur : '—'}`;
+  }
 
   function getMoyenne(studentId: string): number | null {
-    let total = 0;
-    let coeffTotal = 0;
-    for (const s of subjects) {
-      const note = noteByStudentSubject.get(`${studentId}:${s.id}`);
-      if (note !== undefined) {
-        total += note * s.coefficient;
-        coeffTotal += s.coefficient;
-      }
-    }
-    return coeffTotal > 0 ? total / coeffTotal : null;
+    const subjectAverages = subjects.map((s) => ({
+      moyenne: noteByStudentSubject.get(`${studentId}:${s.id}`) ?? null,
+      coefficient: s.coefficient,
+    }));
+    return computeMoyenneGenerale(subjectAverages);
   }
 
   const sortedByMoyenne = students
@@ -361,7 +387,7 @@ export default async function GradesPage({
                               label={`${m.nom}${validatedSubjectIds.has(m.id) ? ` ✓ ${t('validatedBadge')}` : ''} (${t('coeffAbbrev', { value: m.coefficient })})`}
                               value={
                                 <span className={noteColor(note, classNoteMax)}>
-                                  {note !== null ? `${note}/${classNoteMax}` : '—'}
+                                  {note !== null ? `${note.toFixed(1)}/${classNoteMax}` : '—'}
                                 </span>
                               }
                             />
@@ -457,11 +483,15 @@ export default async function GradesPage({
                           {subjects.map((m) => {
                             const note = noteByStudentSubject.get(`${student.id}:${m.id}`) ?? null;
                             return (
-                              <div key={m.id} className="text-center">
+                              <div
+                                key={m.id}
+                                className="text-center"
+                                title={gradeTooltip(student.id, m.id, t)}
+                              >
                                 <span
                                   className={`text-sm font-semibold ${noteColor(note, classNoteMax)}`}
                                 >
-                                  {note !== null ? note : '—'}
+                                  {note !== null ? note.toFixed(1) : '—'}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
                                   /{classNoteMax}
@@ -514,7 +544,7 @@ export default async function GradesPage({
                       {subjects.map((m) => {
                         const notes = students
                           .map((s) => noteByStudentSubject.get(`${s.id}:${m.id}`))
-                          .filter((n): n is number => n !== undefined);
+                          .filter((n): n is number => n !== undefined && n !== null);
                         const avg =
                           notes.length > 0
                             ? (notes.reduce((a, b) => a + b, 0) / notes.length).toFixed(1)

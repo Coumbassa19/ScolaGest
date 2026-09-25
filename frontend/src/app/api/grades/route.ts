@@ -1,12 +1,17 @@
 // GET  /api/grades?classId=&periode= — list grades (with student + subject)
 //      for a class/period — used by /grades and /bulletin. Also returns
 //      `submissions` (see GradeSubmission below) for the same scope, so a
-//      client can tell which class/subject/period batches are locked.
-// POST /api/grades — bulk-save grades for one class/subject/period/year (the
-//      enter-grades form saves one row per student at once). Upserts on
-//      the (studentId, subjectId, periode, anneeScolaire) unique constraint
-//      so re-saving the same class/subject/period/year corrects rather than
-//      duplicates, while keeping different years' grades separate.
+//      client can tell which class/subject/period batches are locked. Each
+//      grade row also carries `type`/`label` (DEVOIR/COMPOSITION — see
+//      src/lib/server/grades/moyenne.ts) since a subject's trimester grade
+//      is now the blend of several such rows, not a single value.
+// POST /api/grades — bulk-save grades for one class/subject/period/year/
+//      type/label batch (the enter-grades form saves one row per student
+//      at once, for one Devoir round or the Composition). Upserts on the
+//      (studentId, subjectId, periode, anneeScolaire, type, label) unique
+//      constraint so re-saving the same batch corrects rather than
+//      duplicates, while a different Devoir round or a different year
+//      stays a separate row.
 //
 // TEACHER-role scoping: a teacher may only read/write grades for a
 // (class, subject) pair they're actually assigned to (TeacherAssignment).
@@ -18,13 +23,15 @@
 // survives a crafted request regardless of what the UI ever renders.
 //
 // Anti-corruption lock (GradeSubmission): once a TEACHER saves grades for a
-// given (classId, subjectId, periode, anneeScolaire) batch, it is locked —
-// a further POST from that same TEACHER role is rejected outright
-// (GRADES_ALREADY_VALIDATED), regardless of who originally submitted it.
-// The paper grade sheet itself is the proof: a teacher who needs a
-// correction brings it in person to the direction (no digital photo is
-// captured — a class roster commonly spans several physical sheets, which
-// a single mandatory upload can't represent anyway).
+// given (classId, subjectId, periode, anneeScolaire, type, label) batch, it
+// is locked — a further POST from that same TEACHER role for that exact
+// batch is rejected outright (GRADES_ALREADY_VALIDATED), regardless of who
+// originally submitted it. Each Devoir round and the Composition lock
+// independently: a teacher can freely add "Devoir 2" even while "Devoir 1"
+// is already locked. The paper grade sheet itself is the proof: a teacher
+// who needs a correction brings it in person to the direction (no digital
+// photo is captured — a class roster commonly spans several physical
+// sheets, which a single mandatory upload can't represent anyway).
 // DIRECTION/ADMIN/SUPERADMIN (and STAFF granted the 'grades' menu) are
 // never blocked by the lock and can always correct a batch; doing so
 // records correctedById/correctedAt (and an optional correctionNote) on
@@ -54,6 +61,13 @@ const Body = z.object({
   subjectId: zCuid,
   periode: z.enum(['T1', 'T2', 'T3']).default('T1'),
   anneeScolaire: z.string().trim().min(1).max(20).default('2024-2025'),
+  type: z.enum(['DEVOIR', 'COMPOSITION']).default('COMPOSITION'),
+  // Free text ("Devoir 1", "Devoir 2"...). Ignored and forced server-side
+  // to "Composition" when type=COMPOSITION (see below) — never trust a
+  // client-supplied label for that case, since computeMoyenneMatiere
+  // assumes at most one COMPOSITION row per (student, subject, periode,
+  // anneeScolaire).
+  label: z.string().trim().min(1).max(60).default('Composition'),
   entries: z
     .array(
       z.object({
@@ -135,6 +149,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           subjectId: true,
           periode: true,
           anneeScolaire: true,
+          type: true,
+          label: true,
           submittedAt: true,
           submittedBy: { select: { name: true, email: true } },
           correctedAt: true,
@@ -169,7 +185,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 400, headers: { 'x-request-id': ctx.requestId } },
       );
     }
-    const { classId, subjectId, periode, anneeScolaire } = parsed.data;
+    const { classId, subjectId, periode, anneeScolaire, type } = parsed.data;
+    // Hard invariant, not a nicety: computeMoyenneMatiere assumes at most
+    // one COMPOSITION row per (student, subject, periode, anneeScolaire) —
+    // never trust a client-supplied label for that case.
+    const label = type === 'COMPOSITION' ? 'Composition' : parsed.data.label;
     // Round to 1 decimal at the trust boundary — grades allow a single
     // decimal digit (14.5, not 14.52) — whatever precision a client sends,
     // the stored/displayed grade is always clean.
@@ -224,7 +244,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const existingSubmission = await prisma.gradeSubmission.findUnique({
       where: {
-        classId_subjectId_periode_anneeScolaire: { classId, subjectId, periode, anneeScolaire },
+        classId_subjectId_periode_anneeScolaire_type_label: {
+          classId,
+          subjectId,
+          periode,
+          anneeScolaire,
+          type,
+          label,
+        },
       },
     });
 
@@ -244,11 +271,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       entries.map((entry) =>
         prisma.grade.upsert({
           where: {
-            studentId_subjectId_periode_anneeScolaire: {
+            studentId_subjectId_periode_anneeScolaire_type_label: {
               studentId: entry.studentId,
               subjectId,
               periode,
               anneeScolaire,
+              type,
+              label,
             },
           },
           update: { valeur: entry.valeur, classId },
@@ -259,6 +288,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             classId,
             periode,
             anneeScolaire,
+            type,
+            label,
             valeur: entry.valeur,
           },
         }),
@@ -271,7 +302,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // happens for a DIRECTION/ADMIN/STAFF correction.
     const submission = await prisma.gradeSubmission.upsert({
       where: {
-        classId_subjectId_periode_anneeScolaire: { classId, subjectId, periode, anneeScolaire },
+        classId_subjectId_periode_anneeScolaire_type_label: {
+          classId,
+          subjectId,
+          periode,
+          anneeScolaire,
+          type,
+          label,
+        },
       },
       create: {
         schoolId: requireSchoolId(auth.user.schoolId),
@@ -279,6 +317,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         subjectId,
         periode,
         anneeScolaire,
+        type,
+        label,
         submittedById: auth.user.sub,
       },
       update: existingSubmission

@@ -59,22 +59,22 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  verificationCodes VerificationCode[]
-  uploads           FileUpload[]
-  notifications     Notification[]
-  notifPrefs        NotificationPreferences?
-  orders            Order[]
-  withdrawals       Withdrawal[]
-  oauthAccounts     OAuthAccount[]
-  adminActions      AdminAction[]
-  recordedAbsences  Absence[]
-  recordedTeacherAbsences TeacherAbsence[]
-  recordedExpenses  Expense[]
-  gradeSubmissionsSubmitted GradeSubmission[] @relation("GradeSubmissionSubmittedBy")
-  gradeSubmissionsCorrected GradeSubmission[] @relation("GradeSubmissionCorrectedBy")
+  verificationCodes         VerificationCode[]
+  uploads                   FileUpload[]
+  notifications             Notification[]
+  notifPrefs                NotificationPreferences?
+  orders                    Order[]
+  withdrawals               Withdrawal[]
+  oauthAccounts             OAuthAccount[]
+  adminActions              AdminAction[]
+  recordedAbsences          Absence[]
+  recordedTeacherAbsences   TeacherAbsence[]
+  recordedExpenses          Expense[]
+  gradeSubmissionsSubmitted GradeSubmission[]        @relation("GradeSubmissionSubmittedBy")
+  gradeSubmissionsCorrected GradeSubmission[]        @relation("GradeSubmissionCorrectedBy")
   // The student(s) this account can see, when role is PARENT — see
   // ParentStudent.
-  parentLinks       ParentStudent[]
+  parentLinks               ParentStudent[]
 
   // Multi-tenancy is opt-in per project: by default no resource is org-scoped.
   // Apps that need it (marketplace, B2B SaaS, classifieds) wire owner relations
@@ -988,6 +988,20 @@ model Grade {
   // Student.anneeScolaire's existing default so pre-migration rows land on
   // the same year.
   anneeScolaire String      @default("2024-2025")
+  // "DEVOIR" | "COMPOSITION" — a trimester's subject grade is the blend of
+  // several devoirs plus one composition (see SchoolSettings.coefDevoir/
+  // coefComposition and src/lib/server/grades/moyenne.ts). Pre-existing
+  // rows default to COMPOSITION, which reproduces the old single-grade
+  // behavior exactly (a lone composition IS the moyenne matière).
+  type          String      @default("COMPOSITION")
+  // Free text ("Devoir 1", "Devoir 2", "Composition"), always non-empty —
+  // never null, so it participates correctly in the unique constraint
+  // below (Postgres does not deduplicate NULLs). Server-forced to exactly
+  // "Composition" whenever type="COMPOSITION" (see POST /api/grades),
+  // never trusted from the client for that case: computeMoyenneMatiere
+  // assumes at most one COMPOSITION row per (student, subject, periode,
+  // anneeScolaire).
+  label         String      @default("Composition")
   // Rounded to 1 decimal place at write time (see /api/grades and the
   // grades import parser) — decimal grades (e.g. 14.5) are common practice,
   // not just whole numbers. Range is 0..cycle.noteMax (10, 20, ...), see the
@@ -995,41 +1009,48 @@ model Grade {
   valeur        Float
   createdAt     DateTime    @default(now())
 
-  @@unique([studentId, subjectId, periode, anneeScolaire])
+  @@unique([studentId, subjectId, periode, anneeScolaire, type, label])
   @@index([classId, subjectId, periode, anneeScolaire])
   @@index([schoolId])
 }
 
 // A locked, verified record that a batch of grades (one class + subject +
-// period + year) has been validated. Grade rows are one per student, but
+// period + year + assessment type/label — one Devoir round, or the
+// Composition) has been validated. Grade rows are one per student, but
 // the paper "fiche de note" a teacher fills covers a whole class/subject/
-// period at once, so the lock + photo proof apply at that batch level, not
-// per individual grade. A TEACHER can create this once per batch (see
+// batch at once, so the lock + photo proof apply at that batch level, not
+// per individual grade. Each Devoir round and the Composition lock
+// independently — a teacher can add "Devoir 2" even while "Devoir 1" is
+// already locked. A TEACHER can create this once per batch (see
 // POST /api/grades) — after that, the same POST rejects further edits from
 // that role, until a DIRECTION/ADMIN/SUPERADMIN account corrects it, which
 // updates correctedById/correctedAt/correctionNote here as an audit trail.
 model GradeSubmission {
-  id            String      @id @default(cuid())
-  schoolId      String
-  school        School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  classId       String
-  schoolClass   SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
-  subjectId     String
-  subject       Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  periode       String
-  anneeScolaire String
-  submittedById String
-  submittedBy   User        @relation("GradeSubmissionSubmittedBy", fields: [submittedById], references: [id])
-  submittedAt   DateTime    @default(now())
+  id             String      @id @default(cuid())
+  schoolId       String
+  school         School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId        String
+  schoolClass    SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  periode        String
+  anneeScolaire  String
+  // Mirrors Grade.type/label — see its comment for the non-null/default
+  // rationale (unique-constraint participation).
+  type           String      @default("COMPOSITION")
+  label          String      @default("Composition")
+  submittedById  String
+  submittedBy    User        @relation("GradeSubmissionSubmittedBy", fields: [submittedById], references: [id])
+  submittedAt    DateTime    @default(now())
   // Set when DIRECTION/ADMIN corrects an already-submitted batch — records
   // who overrode the lock and why (the paper grade sheet the teacher
   // brought in, cross-checked in person).
   correctedById  String?
-  correctedBy    User?     @relation("GradeSubmissionCorrectedBy", fields: [correctedById], references: [id], onDelete: SetNull)
+  correctedBy    User?       @relation("GradeSubmissionCorrectedBy", fields: [correctedById], references: [id], onDelete: SetNull)
   correctedAt    DateTime?
   correctionNote String?
 
-  @@unique([classId, subjectId, periode, anneeScolaire])
+  @@unique([classId, subjectId, periode, anneeScolaire, type, label])
   @@index([schoolId])
 }
 
@@ -1156,6 +1177,13 @@ model SchoolSettings {
   devise         String  @default("Travail - Justice - Solidarité")
   ministryName   String  @default("Ministère de l'Éducation Nationale et de l'Alphabétisation")
   flagUrl        String?
+
+  // How a subject's trimester grade blends its devoirs (arithmetic mean)
+  // with its composition — see src/lib/server/grades/moyenne.ts. 1/2 is
+  // the standard Francophone-school default (composition counts double),
+  // but schools may weight differently.
+  coefDevoir      Int @default(1)
+  coefComposition Int @default(2)
 
   updatedAt DateTime @updatedAt
 }

@@ -28,6 +28,11 @@ export interface SchoolSettingsData {
   // See src/app/page.tsx's MIN_FEATURED_SCHOOLS_TO_SHOW gate.
   featuredOnHomepage: boolean;
   homepageLogoUrl: string | null;
+  // How a subject's trimester grade blends its devoirs (arithmetic mean)
+  // with its composition — see src/lib/server/grades/moyenne.ts. 1/2 is
+  // the standard Francophone-school default (composition counts double).
+  coefDevoir: number;
+  coefComposition: number;
 }
 
 export async function getSchoolSettings(
@@ -72,6 +77,8 @@ export interface SchoolSettingsUpdate {
   flagUrl?: string | null | undefined;
   featuredOnHomepage?: boolean | undefined;
   homepageLogoUrl?: string | null | undefined;
+  coefDevoir?: number | undefined;
+  coefComposition?: number | undefined;
 }
 
 // Prisma's generated input types reject an explicitly-`undefined`-valued

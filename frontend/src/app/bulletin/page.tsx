@@ -12,6 +12,7 @@ import {
   decisionKey,
 } from '@/lib/bulletin-format';
 import { computeClassRanking } from '@/lib/server/bulletin';
+import { buildMoyenneMatiereMap, computeMoyenneGenerale } from '@/lib/server/grades/moyenne';
 import { getSchoolSettings } from '@/lib/server/school-settings';
 import { requirePageAuth } from '@/lib/server/middleware/require-page-auth';
 import { requireSchoolId } from '@/lib/server/tenant/context';
@@ -79,15 +80,41 @@ export default async function BulletinPage({
     );
   }
 
+  const schoolInfo = await getSchoolSettings(prisma, schoolId);
+
   const grades = await prisma.grade.findMany({
     where: { studentId: student.id, periode, anneeScolaire },
     include: { subject: true },
     orderBy: { subject: { nom: 'asc' } },
   });
 
-  const totalCoeff = grades.reduce((sum, g) => sum + g.subject.coefficient, 0);
-  const totalPoints = grades.reduce((sum, g) => sum + g.valeur * g.subject.coefficient, 0);
-  const moyenne = totalCoeff > 0 ? totalPoints / totalCoeff : null;
+  // One row per subject, deduped (grades now holds several rows per
+  // subject — devoirs + composition) — order follows the query above.
+  const subjectsUnique = Array.from(new Map(grades.map((g) => [g.subjectId, g.subject])).values());
+  const moyenneMatiereByStudentSubject = buildMoyenneMatiereMap(
+    grades,
+    schoolInfo.coefDevoir,
+    schoolInfo.coefComposition,
+  );
+  function moyenneDevoirsFor(subjectId: string): number | null {
+    const devoirs = grades.filter((g) => g.subjectId === subjectId && g.type === 'DEVOIR');
+    return devoirs.length > 0
+      ? devoirs.reduce((sum, d) => sum + d.valeur, 0) / devoirs.length
+      : null;
+  }
+  function compositionFor(subjectId: string): number | null {
+    return (
+      grades.find((g) => g.subjectId === subjectId && g.type === 'COMPOSITION')?.valeur ?? null
+    );
+  }
+
+  const totalCoeff = subjectsUnique.reduce((sum, s) => sum + s.coefficient, 0);
+  const moyenne = computeMoyenneGenerale(
+    subjectsUnique.map((s) => ({
+      moyenne: moyenneMatiereByStudentSubject.get(`${student.id}:${s.id}`) ?? null,
+      coefficient: s.coefficient,
+    })),
+  );
   // The student's class's cycle grading scale ("noté sur") — see Cycles.
   const noteMax = student.schoolClass.cycle.noteMax;
 
@@ -99,6 +126,8 @@ export default async function BulletinPage({
     student.classId,
     periode,
     anneeScolaire,
+    schoolInfo.coefDevoir,
+    schoolInfo.coefComposition,
   );
   const myRank = rankByStudent.get(student.id);
   const rang = myRank?.rang ?? null;
@@ -107,8 +136,6 @@ export default async function BulletinPage({
   const savedRemark = await prisma.bulletinRemark.findUnique({
     where: { studentId_periode: { studentId: student.id, periode } },
   });
-
-  const schoolInfo = await getSchoolSettings(prisma, schoolId);
 
   return (
     <div className="bg-background min-h-full font-body">
@@ -211,7 +238,7 @@ export default async function BulletinPage({
             {grades.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">{t('noGrades')}</p>
             ) : (
-              <table className="w-full min-w-[500px]">
+              <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="border-b-2 border-border">
                     <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
@@ -219,6 +246,12 @@ export default async function BulletinPage({
                     </th>
                     <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
                       {t('coeffHeader')}
+                    </th>
+                    <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                      {t('devoirsHeader')}
+                    </th>
+                    <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                      {t('compositionHeader')}
                     </th>
                     <th className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
                       {t('gradeHeader')}
@@ -229,22 +262,34 @@ export default async function BulletinPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {grades.map((g) => (
-                    <tr key={g.id} className="border-b border-border">
-                      <td className="px-3 py-3 text-sm font-semibold text-foreground">
-                        {g.subject.nom}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-center font-semibold text-foreground">
-                        {g.subject.coefficient}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-center font-semibold text-foreground">
-                        {g.valeur}/{noteMax}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-center text-muted-foreground">
-                        {t(`appreciation.${getAppreciationKey(g.valeur, noteMax)}`)}
-                      </td>
-                    </tr>
-                  ))}
+                  {subjectsUnique.map((s) => {
+                    const moyenneMatiere =
+                      moyenneMatiereByStudentSubject.get(`${student.id}:${s.id}`) ?? null;
+                    const moyenneDevoirs = moyenneDevoirsFor(s.id);
+                    const composition = compositionFor(s.id);
+                    return (
+                      <tr key={s.id} className="border-b border-border">
+                        <td className="px-3 py-3 text-sm font-semibold text-foreground">{s.nom}</td>
+                        <td className="px-3 py-3 text-sm text-center font-semibold text-foreground">
+                          {s.coefficient}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-center text-foreground">
+                          {moyenneDevoirs !== null ? moyenneDevoirs.toFixed(1) : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-center text-foreground">
+                          {composition !== null ? composition : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-center font-semibold text-foreground">
+                          {moyenneMatiere !== null ? moyenneMatiere.toFixed(1) : '—'}/{noteMax}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-center text-muted-foreground">
+                          {moyenneMatiere !== null
+                            ? t(`appreciation.${getAppreciationKey(moyenneMatiere, noteMax)}`)
+                            : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   <tr className="bg-muted border-t-2 border-foreground">
                     <td className="px-3 py-3 text-sm font-semibold text-foreground">
                       {t('generalAverage')}
@@ -252,6 +297,8 @@ export default async function BulletinPage({
                     <td className="px-3 py-3 text-sm text-center font-semibold text-foreground">
                       {totalCoeff}
                     </td>
+                    <td className="px-3 py-3 text-sm text-center text-muted-foreground">—</td>
+                    <td className="px-3 py-3 text-sm text-center text-muted-foreground">—</td>
                     <td className="px-3 py-3 text-sm text-center font-semibold text-primary text-base">
                       {moyenne !== null ? moyenne.toFixed(2) : '—'}/{noteMax}
                     </td>

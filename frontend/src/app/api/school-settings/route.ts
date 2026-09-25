@@ -57,6 +57,8 @@ const Body = z.object({
     .regex(LOGO_DATA_URL_RE, 'Logo invalide — PNG ou JPG uniquement.')
     .nullable()
     .optional(),
+  coefDevoir: z.number().int().min(1).max(20).optional(),
+  coefComposition: z.number().int().min(1).max(20).optional(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {

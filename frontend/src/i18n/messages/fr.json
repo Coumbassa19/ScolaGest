@@ -439,6 +439,18 @@
       "homepageSectionHint": "Ton logo n'apparaît sur la page d'accueil publique qu'une fois qu'au moins 3 écoles ont activé cette option — c'est normal si tu ne le vois pas tout de suite après avoir coché la case.",
       "featuredOnHomepageLabel": "Afficher le logo de mon école sur la page d'accueil publique de ScolaGest"
     },
+    "grading": {
+      "title": "Pondération des notes",
+      "subtitle": "Comment la moyenne d'un trimestre combine les devoirs et la composition",
+      "coefDevoirLabel": "Coefficient Devoirs :",
+      "coefCompositionLabel": "Coefficient Composition :",
+      "hint": "Par défaut, la composition compte double (coefficient 2) par rapport à la moyenne des devoirs (coefficient 1) — modifie ces valeurs si ton établissement pondère différemment.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Pondération enregistrée.",
+      "errorInvalid": "Les coefficients doivent être des nombres entiers entre 1 et 20.",
+      "errorNetwork": "Erreur réseau. Réessaie."
+    },
     "academicYear": {
       "currentLabel": "Année en cours :",
       "loading": "Chargement…",
@@ -1071,7 +1083,9 @@
       "coeffAbbrev": "coeff. {value}",
       "bulletinLink": "Bulletin",
       "footerClassAverage": "Moyenne classe",
-      "validatedBadge": "Validé"
+      "validatedBadge": "Validé",
+      "devoirsHeader": "Devoirs",
+      "compositionHeader": "Composition"
     },
     "enter": {
       "backLink": "NOTES & RÉSULTATS",
@@ -1080,6 +1094,12 @@
       "noSubjects": "Aucune matière n'existe encore — créez-en une avant de saisir des notes."
     },
     "enterForm": {
+      "typeLabel": "Type d'évaluation :",
+      "typeDevoir": "Devoir",
+      "typeComposition": "Composition",
+      "labelFieldLabel": "Libellé du devoir :",
+      "labelFieldPlaceholder": "ex. Devoir 1",
+      "labelFieldHint": "Utilise le même libellé qu'un devoir déjà saisi pour le corriger, ou laisse la suggestion pour un nouveau devoir.",
       "classLabel": "Classe :",
       "subjectLabel": "Matière :",
       "periodLabel": "Période :",
@@ -1091,6 +1111,7 @@
       "loadingStudents": "Chargement des élèves…",
       "noStudentsInClass": "Aucun élève dans cette classe.",
       "errorSelectRequired": "Sélectionne une classe et une matière.",
+      "errorLabelRequired": "Indique un libellé pour ce devoir.",
       "errorAtLeastOneGrade": "Saisis au moins une note.",
       "errorGradeRange": "Les notes doivent être des nombres entre 0 et {max}.",
       "errorNetwork": "Erreur réseau. Réessaie.",
@@ -1160,7 +1181,9 @@
     "dobLabel": "Date de naissance",
     "subjectHeader": "Matière",
     "coeffHeader": "Coeff.",
-    "gradeHeader": "Note",
+    "devoirsHeader": "Devoirs",
+    "compositionHeader": "Composition",
+    "gradeHeader": "Moyenne",
     "appreciationHeader": "Appréciation",
     "noGrades": "Aucune note enregistrée pour cette période.",
     "generalAverage": "MOYENNE GÉNÉRALE",
@@ -1890,7 +1913,9 @@
     "noGrades": "Aucune note enregistrée pour cette période.",
     "subjectHeader": "Matière",
     "coeffHeader": "Coeff.",
-    "gradeHeader": "Note",
+    "devoirsHeader": "Devoirs",
+    "compositionHeader": "Composition",
+    "gradeHeader": "Moyenne",
     "appreciationHeader": "Appréciation",
     "generalAverage": "Moyenne générale",
     "absencesTitle": "Absences",
