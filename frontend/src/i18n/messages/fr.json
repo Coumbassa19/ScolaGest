@@ -498,12 +498,8 @@
       "edit": {
         "pageTitle": "Modifier les accès",
         "backLink": "Retour aux utilisateurs",
-        "roleLine": "Rôle : {role}",
-        "role": {
-          "DIRECTION": "Direction",
-          "TEACHER": "Enseignant",
-          "STAFF": "Personnel"
-        },
+        "roleFieldLabel": "Rôle",
+        "roleChangeWarning": "Ce compte gardera le même email, mais ses droits changeront dès l'enregistrement.",
         "noPickableMenus": "Aucun menu supplémentaire disponible pour ce rôle.",
         "menusHint": "En plus des menus toujours accessibles à ce rôle.",
         "coreMenusNote": "Toujours accessible pour ce rôle : {menus}",

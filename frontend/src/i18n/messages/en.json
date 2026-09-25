@@ -512,12 +512,8 @@
       "edit": {
         "pageTitle": "Edit access",
         "backLink": "Back to users",
-        "roleLine": "Role: {role}",
-        "role": {
-          "DIRECTION": "Direction",
-          "TEACHER": "Teacher",
-          "STAFF": "Staff"
-        },
+        "roleFieldLabel": "Role",
+        "roleChangeWarning": "This account keeps the same email, but its rights change as soon as you save.",
         "noPickableMenus": "No extra menu available for this role.",
         "menusHint": "On top of the menus this role always has access to.",
         "coreMenusNote": "Always accessible for this role: {menus}",

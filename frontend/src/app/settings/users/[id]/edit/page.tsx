@@ -21,7 +21,16 @@ export default async function EditUserMenusPage({ params }: { params: Promise<{ 
 
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, name: true, role: true, enabledMenus: true, schoolId: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      enabledMenus: true,
+      schoolId: true,
+      teacherId: true,
+      staffId: true,
+    },
   });
   // User isn't tenant-scoped by admin.prisma (see requireSchoolAdmin's
   // comment) — a DIRECTION owner must never reach another school's account
@@ -34,6 +43,23 @@ export default async function EditUserMenusPage({ params }: { params: Promise<{ 
   ) {
     notFound();
   }
+
+  // Same "unlinked" lists CreateUserForm uses — needed here so an admin can
+  // switch this account's role INTO Teacher/Staff (see
+  // ChangeUserRoleForm/EditUserMenusForm). Teacher/Staff are tenant-scoped
+  // models, so admin.user.prisma already narrows this to the right school.
+  const [unlinkedTeachers, unlinkedStaff] = await Promise.all([
+    prisma.teacher.findMany({
+      where: { user: null },
+      select: { id: true, nom: true, prenom: true },
+      orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+    }),
+    prisma.staff.findMany({
+      where: { user: null },
+      select: { id: true, nom: true, prenom: true, poste: true },
+      orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+    }),
+  ]);
 
   const t = await getTranslations('settings.users.edit');
 
@@ -66,6 +92,8 @@ export default async function EditUserMenusPage({ params }: { params: Promise<{ 
             initialEnabledMenus={
               Array.isArray(user.enabledMenus) ? (user.enabledMenus as string[]) : []
             }
+            unlinkedTeachers={unlinkedTeachers}
+            unlinkedStaff={unlinkedStaff}
           />
         </div>
       </div>
