@@ -1,5 +1,43 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+// Per-request CSP nonce + header, applied to every HTML page this proxy
+// sees (the matcher below already excludes _next/static, _next/image,
+// favicon.ico and api/*, so this never touches JSON API responses).
+//
+// script-src uses a per-request nonce + 'strict-dynamic': Next.js reads the
+// nonce off the `x-nonce` request header (set below) and applies it to its
+// own bootstrap/chunk scripts automatically — this app has no inline
+// <script> tags or next/script usage of its own (verified: none in src/),
+// so nothing else needs to read the nonce.
+//
+// style-src keeps 'unsafe-inline': React/Tailwind rely on inline `style={}}`
+// attributes throughout the app, and CSP has no practical per-attribute
+// nonce mechanism for that — script-src is the layer that actually matters
+// for XSS blast-radius, not style-src.
+//
+// img-src allows Cloudinary (POST /api/upload's storage backend — see its
+// header comment) plus data:/blob: for client-side previews. connect-src
+// allows Sentry's ingest host (NEXT_PUBLIC_SENTRY_DSN is empty by default —
+// harmless to allow even when unconfigured). Fonts are self-hosted via
+// next/font/google (downloaded at build time), so font-src is 'self' only —
+// no fonts.gstatic.com needed.
+function buildCsp(nonce: string): string {
+  const directives = [
+    `default-src 'self'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' https://res.cloudinary.com data: blob:`,
+    `font-src 'self'`,
+    `connect-src 'self' https://*.sentry.io`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `frame-ancestors 'none'`,
+    `upgrade-insecure-requests`,
+  ];
+  return directives.join('; ');
+}
+
 // Silent-refresh gate for protected pages.
 //
 // The (15-min) access cookie can expire while a (7-day) refresh cookie is
@@ -48,18 +86,34 @@ function isAuthedPath(pathname: string): boolean {
 }
 
 export function proxy(req: NextRequest): NextResponse {
-  if (AUTHED_PREFIXES.length === 0) return NextResponse.next();
+  // btoa is available in the Edge runtime; crypto.randomUUID() gives 122
+  // bits of entropy, plenty for a single-request CSP nonce.
+  const nonce = btoa(crypto.randomUUID());
+  const csp = buildCsp(nonce);
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  function next(): NextResponse {
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    res.headers.set('Content-Security-Policy', csp);
+    return res;
+  }
+
+  if (AUTHED_PREFIXES.length === 0) return next();
 
   const { pathname, search } = req.nextUrl;
-  if (!isAuthedPath(pathname)) return NextResponse.next();
+  if (!isAuthedPath(pathname)) return next();
 
-  if (req.cookies.get(ACCESS_COOKIE)?.value) return NextResponse.next();
+  if (req.cookies.get(ACCESS_COOKIE)?.value) return next();
 
   const target = pathname + search;
   const url = req.nextUrl.clone();
   url.pathname = '/api/auth/refresh-and-return';
   url.search = `?next=${encodeURIComponent(target)}`;
-  return NextResponse.redirect(url, 303);
+  const res = NextResponse.redirect(url, 303);
+  res.headers.set('Content-Security-Policy', csp);
+  return res;
 }
 
 export const config = {

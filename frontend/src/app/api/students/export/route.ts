@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 
 import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
-import * as XLSX from 'xlsx';
+import { writeSheetBuffer } from '@/lib/server/import/write-sheet';
 import { requireStaff } from '@/lib/server/middleware/require-staff';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 import { IMPORT_COLUMNS } from '@/lib/students-import-columns';
@@ -78,12 +78,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       s.schoolClass.name,
     ]);
 
-    const sheet = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
-    sheet['!cols'] = headerRow.map(() => ({ wch: 18 }));
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Élèves');
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+    const buffer = await writeSheetBuffer([headerRow, ...dataRows], {
+      sheetName: 'Élèves',
+      colWidth: 18,
+    });
 
     const filename = `eleves-${className}.xlsx`.replace(/[^\w.-]+/g, '_');
 

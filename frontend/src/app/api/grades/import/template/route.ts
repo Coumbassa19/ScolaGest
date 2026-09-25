@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 
 import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
-import * as XLSX from 'xlsx';
+import { writeSheetBuffer } from '@/lib/server/import/write-sheet';
 import { requireStaff } from '@/lib/server/middleware/require-staff';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 
@@ -32,12 +32,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const headerRow = ['Matricule', 'Nom', 'Prénom', ...subjects.map((s) => s.nom)];
     const exampleRow = ['', 'Diallo', 'Fatoumata', ...subjects.map(() => '14')];
 
-    const sheet = XLSX.utils.aoa_to_sheet([headerRow, exampleRow]);
-    sheet['!cols'] = headerRow.map(() => ({ wch: 18 }));
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Notes');
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+    const buffer = await writeSheetBuffer([headerRow, exampleRow], {
+      sheetName: 'Notes',
+      colWidth: 18,
+    });
 
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,

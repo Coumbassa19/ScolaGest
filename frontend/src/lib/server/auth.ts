@@ -199,12 +199,13 @@ export function verifyCsrf(req: NextRequest): NextResponse | null {
   }
 
   const cookieToken = req.cookies.get(CSRF_COOKIE_NAME)?.value;
-  if (cookieToken) {
-    const cookieBuf = Buffer.from(cookieToken);
-    const headerBuf = Buffer.from(headerToken);
-    if (cookieBuf.length !== headerBuf.length || !crypto.timingSafeEqual(cookieBuf, headerBuf)) {
-      return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
-    }
+  if (!cookieToken) {
+    return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+  }
+  const cookieBuf = Buffer.from(cookieToken);
+  const headerBuf = Buffer.from(headerToken);
+  if (cookieBuf.length !== headerBuf.length || !crypto.timingSafeEqual(cookieBuf, headerBuf)) {
+    return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
   }
 
   return null;

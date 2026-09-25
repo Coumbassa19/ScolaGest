@@ -22,11 +22,11 @@ export const runtime = 'nodejs';
 
 import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
-import * as XLSX from 'xlsx';
 import { verifyCsrf } from '@/lib/server/auth';
 import { requireStaff } from '@/lib/server/middleware/require-staff';
 import { makeRequestContext, withRequestContext } from '@/lib/server/observability/request-context';
 import { requireSchoolId } from '@/lib/server/tenant/context';
+import { readSheetRows } from '@/lib/server/import/read-sheet';
 import { parseGradesSheet, type GradeImportRowError } from '@/lib/grades-import-columns';
 
 const MAX_FILE_BYTES = 5_000_000;
@@ -95,16 +95,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     let rows: unknown[][];
     try {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
-      if (!sheet) throw new Error('empty workbook');
-      rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-        header: 1,
-        blankrows: false,
-        defval: '',
-      });
+      rows = await readSheetRows(file);
     } catch {
       return NextResponse.json(
         {

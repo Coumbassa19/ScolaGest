@@ -34,6 +34,7 @@
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "heic-convert": "^2.1.0",
     "jose": "^6.2.3",
     "lucide-react": "^1.45.0",
@@ -46,7 +47,6 @@
     "resend": "^6.12.2",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.6.0",
-    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -61,7 +61,7 @@
     "autoprefixer": "^10.4.20",
     "eslint-config-next": "^16.2.6",
     "fast-glob": "^3.3.3",
-    "postcss": "^8.5.0",
+    "postcss": "^8.5.28",
     "prisma": "^5.22.0",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.19.2",
